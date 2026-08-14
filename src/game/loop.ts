@@ -1,6 +1,6 @@
 import { audio } from "./audio";
+import { createGlRenderer } from "./gl";
 import type { Input } from "./input";
-import { render } from "./render";
 import { startRaid, step, screenToWorld } from "./sim";
 import { patchHud } from "./store";
 import { loadBest, type World } from "./world";
@@ -25,22 +25,16 @@ export function runGame(
   let acc = 0;
   let hudT = 0;
   let running = true;
+  const gl = createGlRenderer(canvas);
 
   const resize = () => {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-    canvas.width = Math.max(1, Math.floor(w * dpr));
-    canvas.height = Math.max(1, Math.floor(h * dpr));
+    gl.resize();
   };
   resize();
   const ro = new ResizeObserver(resize);
   ro.observe(canvas);
   window.addEventListener("orientationchange", resize);
   window.visualViewport?.addEventListener("resize", resize);
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2d context unavailable");
 
   const probe = () => {
     window.__controlsTest = {
@@ -116,7 +110,7 @@ export function runGame(
       acc -= STEP;
     }
 
-    render(ctx, world, now);
+    gl.render(world, now);
 
     hudT += dt;
     if (hudT > 0.08) {
@@ -138,6 +132,7 @@ export function runGame(
       window.removeEventListener("orientationchange", resize);
       window.visualViewport?.removeEventListener("resize", resize);
       audio.stopBeam();
+      gl.dispose();
       delete window.__controlsTest;
     },
     start() {

@@ -4,7 +4,7 @@ import { audio } from "@/game/audio";
 import { loadArt } from "@/game/assets";
 import { haptics } from "@/game/haptics";
 import { Input } from "@/game/input";
-import { runGame, type GameHandle } from "@/game/loop";
+import type { GameHandle } from "@/game/loop";
 import { useHud } from "@/game/store";
 import { assetUrl } from "@/game/paths";
 import { createWorld, loadBest } from "@/game/world";
@@ -42,8 +42,13 @@ export function SaucerRaid() {
     input.attach(wrap);
     const world = createWorld();
     useHud.setState({ best: loadBest(), phase: "title" });
-    const handle = runGame(canvas, world, input);
-    handleRef.current = handle;
+    let cancelled = false;
+    let handle: GameHandle | null = null;
+    void import("@/game/loop").then(({ runGame }) => {
+      if (cancelled || !canvas.isConnected) return;
+      handle = runGame(canvas, world, input);
+      handleRef.current = handle;
+    });
 
     const onPointer = (e: PointerEvent) => {
       if (e.pointerType === "mouse" && e.buttons & 1 && world.state.phase === "playing") {
@@ -59,9 +64,10 @@ export function SaucerRaid() {
     window.addEventListener("pointerup", onUp);
 
     return () => {
+      cancelled = true;
       wrap.removeEventListener("pointerdown", onPointer);
       window.removeEventListener("pointerup", onUp);
-      handle.destroy();
+      handle?.destroy();
       input.detach();
       handleRef.current = null;
     };

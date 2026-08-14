@@ -53,6 +53,13 @@ export type Actor = {
   fireCd: number;
   z: number;
   propKey?: string;
+  mass?: number;
+  invMass?: number;
+  spin?: number;
+  restitution?: number;
+  drag?: number;
+  knockX?: number;
+  knockY?: number;
 };
 
 export type Particle = {

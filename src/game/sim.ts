@@ -2,6 +2,15 @@ import { audio } from "./audio";
 import { haptics } from "./haptics";
 import type { Actions } from "./input";
 import {
+  applyImpulse,
+  beamPull,
+  blast,
+  collideWorld,
+  integrate,
+  isStatic,
+  sweptHit,
+} from "./physics";
+import {
   BEAM_RADIUS,
   COLS,
   LASER_RATE,
@@ -92,23 +101,38 @@ function kill(w: World, a: Actor, how: "abduct" | "blast") {
     w.explosions.push({ x: a.x, y: a.y, t: 0, scale: a.r > 40 ? 1.6 : 1 });
     burst(w, a.x, a.y, 22, "#ffb060", 260);
     burst(w, a.x, a.y, 10, "#3a2a22", 120);
+    blast(w, a.x, a.y, a.r > 40 ? 240 : 150, a.r > 40 ? 980 : 520);
     w.state.shake = Math.min(1, w.state.shake + (a.r > 40 ? 0.55 : 0.32));
     w.state.hitstop = a.r > 40 ? 0.05 : 0.03;
     if (a.destructible && a.kind !== "prop") {
-      w.actors.push({
-        ...a,
-        id: a.id + 90000,
-        kind: "rubble",
-        sprite: `rubble-${1 + (a.id % 4)}`,
-        hp: 1,
-        dead: false,
-        destructible: false,
-        abductable: false,
-        solid: false,
-        w: a.w * 0.7,
-        h: a.h * 0.45,
-        r: a.r * 0.5,
-      });
+      const shards = a.r > 40 ? 5 : 3;
+      for (let i = 0; i < shards; i++) {
+        const ang = (Math.PI * 2 * i) / shards + Math.random() * 0.4;
+        const spd = 80 + Math.random() * 160;
+        w.actors.push({
+          ...a,
+          id: a.id + 90000 + i,
+          kind: "rubble",
+          sprite: `rubble-${1 + ((a.id + i) % 4)}`,
+          hp: 1,
+          dead: false,
+          destructible: false,
+          abductable: false,
+          solid: false,
+          w: a.w * (0.28 + Math.random() * 0.25),
+          h: a.h * (0.22 + Math.random() * 0.2),
+          r: a.r * 0.28,
+          x: a.x + Math.cos(ang) * 10,
+          y: a.y + Math.sin(ang) * 10,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          spin: (Math.random() - 0.5) * 10,
+          mass: 1.6,
+          invMass: 1 / 1.6,
+          restitution: 0.25,
+          drag: 2.2,
+        });
+      }
     }
   }
   w.state.heat = clamp(w.state.heat + a.heat, 0, 100);
@@ -300,8 +324,10 @@ export function step(w: World, input: Actions, dt: number) {
   const ty = ay * speed;
   s.vx += (tx - s.vx) * (1 - Math.exp(-10 * dt));
   s.vy += (ty - s.vy) * (1 - Math.exp(-10 * dt));
-  s.x = clamp(s.x + s.vx * dt, 48, WORLD_W - 48);
-  s.y = clamp(s.y + s.vy * dt, 48, WORLD_H - 48);
+  s.knockX = (s.knockX ?? 0) * Math.exp(-7 * dt);
+  s.knockY = (s.knockY ?? 0) * Math.exp(-7 * dt);
+  s.x = clamp(s.x + (s.vx + (s.knockX ?? 0)) * dt, 48, WORLD_W - 48);
+  s.y = clamp(s.y + (s.vy + (s.knockY ?? 0)) * dt, 48, WORLD_H - 48);
 
   if (ax || ay) {
     const desired = Math.atan2(ay, ax);
@@ -368,10 +394,7 @@ export function step(w: World, input: Actions, dt: number) {
     const dist = Math.hypot(dx, dy);
 
     if (beam && a.abductable && dist < BEAM_RADIUS + a.r * 0.4) {
-      a.lift += dt;
-      const pull = 3.2;
-      a.x += (s.x - a.x) * pull * dt;
-      a.y += (s.y - 18 - a.y) * pull * dt;
+      beamPull(a, s.x, s.y, dt);
       spawnParticle(
         w,
         a.x + (Math.random() - 0.5) * 16,
@@ -384,7 +407,6 @@ export function step(w: World, input: Actions, dt: number) {
         0,
       );
       if (a.lift >= a.abductTime) kill(w, a, "abduct");
-      continue;
     } else {
       a.lift = Math.max(0, a.lift - dt * 1.6);
     }
@@ -394,10 +416,8 @@ export function step(w: World, input: Actions, dt: number) {
       const jy = s.y - a.y;
       const jl = Math.hypot(jx, jy) || 1;
       const spd = 145;
-      a.vx = (jx / jl) * spd;
-      a.vy = (jy / jl) * spd;
-      a.x += a.vx * dt;
-      a.y += a.vy * dt;
+      a.vx += ((jx / jl) * spd - a.vx) * (1 - Math.exp(-6 * dt));
+      a.vy += ((jy / jl) * spd - a.vy) * (1 - Math.exp(-6 * dt));
       a.facing = Math.atan2(a.vy, a.vx);
       if (a.fireCd <= 0 && jl < 520) {
         a.fireCd = 1.15;
@@ -431,16 +451,13 @@ export function step(w: World, input: Actions, dt: number) {
           wanderA: 0,
           fireCd: 0,
           z: a.y,
+          mass: 0.15,
+          invMass: 1 / 0.15,
         });
       }
-      continue;
-    }
-
-    if (a.kind === "rubble" || a.kind === "prop") {
-      continue;
-    }
-
-    if (
+    } else if (a.kind === "rubble") {
+      a.spin = (a.spin ?? 0) * Math.exp(-1.8 * dt);
+    } else if (
       a.kind === "cow" ||
       a.kind === "pig" ||
       a.kind === "sheep" ||
@@ -453,8 +470,10 @@ export function step(w: World, input: Actions, dt: number) {
         a.flee -= dt;
         const fl = dist || 1;
         const spd = a.kind === "chicken" ? 95 : a.kind === "cow" ? 55 : 80;
-        a.x += (dx / fl) * spd * dt;
-        a.y += (dy / fl) * spd * dt;
+        const wx = (dx / fl) * spd;
+        const wy = (dy / fl) * spd;
+        a.vx += (wx - a.vx) * (1 - Math.exp(-7 * dt));
+        a.vy += (wy - a.vy) * (1 - Math.exp(-7 * dt));
       } else {
         a.wanderT -= dt;
         if (a.wanderT <= 0) {
@@ -462,16 +481,20 @@ export function step(w: World, input: Actions, dt: number) {
           a.wanderA = Math.random() * Math.PI * 2;
         }
         const spd = 22;
-        a.x += Math.cos(a.wanderA) * spd * dt;
-        a.y += Math.sin(a.wanderA) * spd * dt;
+        a.vx += (Math.cos(a.wanderA) * spd - a.vx) * (1 - Math.exp(-4 * dt));
+        a.vy += (Math.sin(a.wanderA) * spd - a.vy) * (1 - Math.exp(-4 * dt));
       }
-      a.x = clamp(a.x, 40, WORLD_W - 40);
-      a.y = clamp(a.y, 40, WORLD_H - 40);
     }
+
+    if (!isStatic(a) && a.kind !== "prop") integrate(a, dt);
   }
+
+  collideWorld(w);
 
   for (const L of w.lasers) {
     if (L.dead) continue;
+    const x0 = L.x;
+    const y0 = L.y;
     L.x += L.vx * dt;
     L.y += L.vy * dt;
     L.wanderT -= dt;
@@ -481,22 +504,22 @@ export function step(w: World, input: Actions, dt: number) {
     }
     for (const a of w.actors) {
       if (a.dead || !a.destructible) continue;
-      const ddx = a.x - L.x;
-      const ddy = a.y - L.y;
-      if (ddx * ddx + ddy * ddy < (a.r + 10) * (a.r + 10)) {
-        L.dead = true;
-        a.hp -= 22;
-        a.flash = 0.08;
-        audio.hit();
-        burst(w, L.x, L.y, 6, "#9dffc4", 90);
-        if (a.hp <= 0) kill(w, a, "blast");
-        break;
-      }
+      if (!sweptHit(x0, y0, L.x, L.y, a.x, a.y, a.r + 12)) continue;
+      L.dead = true;
+      a.hp -= 22;
+      a.flash = 0.08;
+      applyImpulse(a, L.vx * 0.08, L.vy * 0.08);
+      audio.hit();
+      burst(w, L.x, L.y, 6, "#9dffc4", 90);
+      if (a.hp <= 0) kill(w, a, "blast");
+      break;
     }
   }
 
   for (const b of w.bullets) {
     if (b.dead) continue;
+    const x0 = b.x;
+    const y0 = b.y;
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.wanderT -= dt;
@@ -504,10 +527,11 @@ export function step(w: World, input: Actions, dt: number) {
       b.dead = true;
       continue;
     }
-    const ddx = b.x - s.x;
-    const ddy = b.y - s.y;
-    if (ddx * ddx + ddy * ddy < (s.r + 6) * (s.r + 6)) {
+    if (sweptHit(x0, y0, b.x, b.y, s.x, s.y, s.r + 8)) {
       b.dead = true;
+      const ln = Math.hypot(b.vx, b.vy) || 1;
+      s.knockX = (s.knockX ?? 0) + (b.vx / ln) * 220;
+      s.knockY = (s.knockY ?? 0) + (b.vy / ln) * 220;
       hurtPlayer(w, 1);
     }
   }

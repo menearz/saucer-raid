@@ -252,6 +252,8 @@ export function createWorld(): World {
       destructible: true,
       solid: true,
       abductable: false,
+      invMass: 0,
+      mass: 0,
     });
   }
 
@@ -303,6 +305,7 @@ export function createWorld(): World {
       h,
       r: Math.max(w, h) * 0.28,
       solid: key === "tree" || key === "pine" || key === "pole",
+      invMass: key === "tree" || key === "pine" || key === "pole" ? 0 : undefined,
       destructible: key === "crate" || key === "barrel" || key === "hay" || key === "mailbox",
       hp: 18,
       maxHp: 18,
@@ -323,7 +326,7 @@ export function createWorld(): World {
   });
 
   const particles: Particle[] = [];
-  for (let i = 0; i < 240; i++) {
+  for (let i = 0; i < 400; i++) {
     particles.push({
       alive: false,
       x: 0,
