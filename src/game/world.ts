@@ -14,8 +14,11 @@ import {
   type Kind,
   type Particle,
   type Popup,
+  type Shout,
   type Terrain,
 } from "./types";
+import { getCraft } from "./crafts";
+import { loadProgress } from "./progress";
 
 export type World = {
   terrain: Uint8Array;
@@ -24,6 +27,7 @@ export type World = {
   bullets: Actor[];
   particles: Particle[];
   popups: Popup[];
+  shouts: Shout[];
   explosions: Explosion[];
   saucer: Actor;
   state: GameState;
@@ -32,6 +36,9 @@ export type World = {
   aimY: number;
   fireCd: number;
   jeepCd: number;
+  tankCd: number;
+  heliCd: number;
+  planeCd: number;
   time: number;
   qaYaw: number;
 };
@@ -257,6 +264,41 @@ export function createWorld(): World {
     });
   }
 
+  const occupied: Array<{ x: number; y: number }> = buildings.map((b) => ({ x: b[2], y: b[3] }));
+  const far = (x: number, y: number) => occupied.every((o) => Math.hypot(o.x - x, o.y - y) > 220);
+  const specs: Array<["weapon" | "cloak", string]> = [
+    ["weapon", "special-armory"],
+    ["cloak", "special-cloak"],
+    ["weapon", "special-armory"],
+    ["cloak", "special-cloak"],
+    ["weapon", "special-armory"],
+    ["cloak", "special-cloak"],
+    ["weapon", "special-armory"],
+  ];
+  for (const [loot, sprite] of specs) {
+    let x = 0;
+    let y = 0;
+    for (let t = 0; t < 24; t++) {
+      x = 180 + rand() * (WORLD_W - 360);
+      y = 180 + rand() * (WORLD_H - 360);
+      if (far(x, y)) break;
+    }
+    occupied.push({ x, y });
+    place("special", x, y, sprite, {
+      w: 82,
+      h: 76,
+      r: 34,
+      hp: 95,
+      maxHp: 95,
+      destructible: true,
+      solid: true,
+      abductable: false,
+      invMass: 0,
+      mass: 0,
+      loot,
+    });
+  }
+
   const vehicles: Array<[Kind, string, number, number]> = [
     ["tractor", "tractor", 600, 760],
     ["tractor", "tractor", 1540, 1120],
@@ -314,15 +356,22 @@ export function createWorld(): World {
     });
   }
 
+  const craft = getCraft();
+  const prog = loadProgress();
+  const u = prog.upgrades;
+  const hp = craft.hp + u.armor;
+  const speed = craft.speed * (1 + u.engines * 0.12);
+  const beam = craft.beam * (1 + u.tractor * 0.08);
+  const shieldMax = u.shields;
   const sx = 1100;
   const sy = 1500;
   const saucer = actor("saucer", sx, sy, {
-    sprite: "saucer",
-    r: 34,
-    w: 86,
-    h: 86,
-    hp: MAX_HP,
-    maxHp: MAX_HP,
+    sprite: craft.sprite,
+    r: craft.r,
+    w: craft.w,
+    h: craft.h,
+    hp,
+    maxHp: hp,
   });
 
   const particles: Particle[] = [];
@@ -348,6 +397,7 @@ export function createWorld(): World {
     bullets: [],
     particles,
     popups: [],
+    shouts: [],
     explosions: [],
     saucer,
     state: {
@@ -357,8 +407,8 @@ export function createWorld(): World {
       combo: 0,
       comboTimer: 0,
       heat: 0,
-      hp: MAX_HP,
-      maxHp: MAX_HP,
+      hp,
+      maxHp: hp,
       shake: 0,
       hitstop: 0,
       camX: sx,
@@ -368,12 +418,28 @@ export function createWorld(): World {
       seed: 1,
       stats: emptyStats(),
       reason: "",
+      alert: "calm",
+      craftId: craft.id,
+      beamR: beam,
+      laserMult: craft.laser * (1 + u.weapons * 0.12),
+      fireRate: craft.fireRate * (1 - u.weapons * 0.06),
+      speed,
+      heatMult: craft.heatMult,
+      weaponTier: u.weapons,
+      cloakT: 0,
+      level: prog.level,
+      shield: shieldMax,
+      shieldMax,
+      abductMul: 1 + u.tractor * 0.28,
     },
     beamOn: false,
     aimX: 1,
     aimY: 0,
     fireCd: 0,
     jeepCd: 0,
+    tankCd: 1.5,
+    heliCd: 2,
+    planeCd: 3,
     time: 0,
     qaYaw: 0,
   };

@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import type { Phase, Stats } from "./types";
+import type { Alert, Phase, Shout, Stats } from "./types";
+import type { CraftId } from "./crafts";
+import { loadCraftId } from "./crafts";
+import { loadProgress, type MapMark } from "./progress";
 
 export type HudSlice = {
   phase: Phase;
@@ -14,6 +17,16 @@ export type HudSlice = {
   best: number;
   stats: Stats | null;
   reason: "time" | "destroyed" | "";
+  alert: Alert;
+  craftId: CraftId;
+  shouts: Shout[];
+  weaponTier: number;
+  cloakT: number;
+  level: number;
+  salvage: number;
+  shield: number;
+  shieldMax: number;
+  marks: MapMark[];
 };
 
 const empty: HudSlice = {
@@ -29,12 +42,35 @@ const empty: HudSlice = {
   best: 0,
   stats: null,
   reason: "",
+  alert: "calm",
+  craftId: "disc",
+  shouts: [],
+  weaponTier: 0,
+  cloakT: 0,
+  level: 1,
+  salvage: 0,
+  shield: 0,
+  shieldMax: 0,
+  marks: [],
 };
 
-export const useHud = create<HudSlice>(() => ({ ...empty }));
+export const useHud = create<HudSlice>(() => ({
+  ...empty,
+  craftId: loadCraftId(),
+  level: loadProgress().level,
+  salvage: loadProgress().salvage,
+}));
 
 export function resetHud(best: number) {
-  useHud.setState({ ...empty, best, phase: "title" });
+  const p = loadProgress();
+  useHud.setState({
+    ...empty,
+    best,
+    phase: "title",
+    craftId: loadCraftId(),
+    level: p.level,
+    salvage: p.salvage,
+  });
 }
 
 export function patchHud(partial: Partial<HudSlice>) {

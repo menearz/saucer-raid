@@ -5,7 +5,7 @@ import appCss from "../styles.css?url";
 
 const APP_NAME = "Saucer Raid";
 const host = import.meta.env.VITE_PUBLIC_HOSTNAME;
-const ogImage = host ? `https://${host}/og.jpg` : undefined;
+const ogImage = host ? `https://${host}/og.png` : undefined;
 
 export const Route = createRootRoute({
   head: () => ({

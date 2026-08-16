@@ -56,6 +56,33 @@ export class Input {
   qaSteer = 0;
   private unsubs: Array<() => void> = [];
 
+  reset() {
+    this.keys.clear();
+    this.injected.clear();
+    this.sticks = [];
+    this.beamHeld = false;
+    this.fireHeld = false;
+    this.overrideMove = null;
+    this.qaSteer = 0;
+    this.hasMouseAim = false;
+    this.prevFire = false;
+    this.prevPause = false;
+    this.prevStart = false;
+    this.justFire = false;
+    this.justPause = false;
+    this.justStart = false;
+    this.actions = {
+      moveX: 0,
+      moveY: 0,
+      aimX: 0,
+      aimY: 0,
+      fire: false,
+      beam: false,
+      pause: false,
+      start: false,
+    };
+  }
+
   attach(target: HTMLElement) {
     const onKey = (e: KeyboardEvent, down: boolean) => {
       const code = e.code;
@@ -80,10 +107,11 @@ export class Input {
     const kd = (e: KeyboardEvent) => onKey(e, true);
     const ku = (e: KeyboardEvent) => onKey(e, false);
     const blur = () => {
-      this.keys.clear();
-      this.sticks = [];
-      this.beamHeld = false;
-      this.fireHeld = false;
+      this.reset();
+    };
+    const pointerLost = (e: PointerEvent) => {
+      this.endStick(e.pointerId);
+      if (e.pointerType === "mouse") this.keys.delete("Mouse0");
     };
     const mm = (e: PointerEvent) => {
       const r = target.getBoundingClientRect();
@@ -95,12 +123,16 @@ export class Input {
     window.addEventListener("keyup", ku);
     window.addEventListener("blur", blur);
     document.addEventListener("visibilitychange", blur);
+    window.addEventListener("pointerup", pointerLost);
+    window.addEventListener("pointercancel", pointerLost);
     target.addEventListener("pointermove", mm);
     this.unsubs.push(() => {
       window.removeEventListener("keydown", kd);
       window.removeEventListener("keyup", ku);
       window.removeEventListener("blur", blur);
       document.removeEventListener("visibilitychange", blur);
+      window.removeEventListener("pointerup", pointerLost);
+      window.removeEventListener("pointercancel", pointerLost);
       target.removeEventListener("pointermove", mm);
     });
   }
@@ -185,6 +217,8 @@ export class Input {
     }
 
     const pads = typeof navigator !== "undefined" ? navigator.getGamepads?.() : [];
+    let padFire = false;
+    let padBeam = false;
     if (pads) {
       for (const p of pads) {
         if (!p) continue;
@@ -198,19 +232,20 @@ export class Input {
           ax = rs.x;
           ay = rs.y;
         }
-        if (p.buttons[0]?.pressed || p.buttons[7]?.pressed) this.fireHeld = true;
-        if (p.buttons[1]?.pressed || p.buttons[6]?.pressed) this.beamHeld = true;
+        if (p.buttons[0]?.pressed || p.buttons[7]?.pressed) padFire = true;
+        if (p.buttons[1]?.pressed || p.buttons[6]?.pressed) padBeam = true;
         if (p.buttons[9]?.pressed) keys.add("Escape");
       }
     }
 
     const fire =
       this.fireHeld ||
+      padFire ||
       keys.has("KeyJ") ||
       keys.has("Mouse0") ||
       keys.has("ControlLeft") ||
       (aimStick != null && Math.hypot(ax, ay) > 0.35);
-    const beam = this.beamHeld || keys.has("Space") || keys.has("KeyK");
+    const beam = this.beamHeld || padBeam || keys.has("Space") || keys.has("KeyK");
     const pause = keys.has("Escape") || keys.has("KeyP");
     const start = keys.has("Enter") || keys.has("Space");
 

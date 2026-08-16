@@ -310,10 +310,23 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
       seen.clear();
       const hover = Math.sin(now * 0.006) * 4;
       const fi = Math.floor(now / 140) % 4;
-      const saucerSpr = sprite(-1, `saucer-${fi + 1}`);
+      const craftSprite =
+        w.state.craftId && w.state.craftId !== "disc"
+          ? w.saucer.sprite
+          : `saucer-${fi + 1}`;
+      const saucerSpr = sprite(-1, craftSprite);
       saucerSpr.position.set(s.x, 18 + hover, s.y);
-      saucerSpr.scale.set(92, 92, 1);
-      saucerSpr.material.opacity = s.flash > 0 && Math.floor(now / 70) % 2 === 0 ? 0.5 : 1;
+      saucerSpr.scale.set(s.w, s.h, 1);
+      saucerSpr.material.rotation =
+        w.state.craftId === "scout" || w.state.craftId === "phantom" ? -s.facing : 0;
+      const cloaked = (w.state.cloakT ?? 0) > 0;
+      saucerSpr.material.opacity = cloaked
+        ? 0.28 + pulse * 0.22
+        : s.flash > 0 && Math.floor(now / 70) % 2 === 0
+          ? 0.5
+          : 1;
+      saucerLight.color.setHex(cloaked ? 0xc9a0ff : 0xb8f0d0);
+      rim.color.setHex(cloaked ? 0x9a70e0 : 0x6fdb9a);
       saucerSpr.renderOrder = s.y + 400;
       seen.add(-1);
 
@@ -329,10 +342,23 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
         const name = a.kind === "rubble" ? a.sprite : a.propKey ? a.propKey : a.sprite;
         const spr = sprite(a.id, name);
         const lift = a.lift > 0 ? Math.min(36, a.lift * 48) : 0;
-        const bob = a.abductable ? Math.sin(now * 0.004 + a.id) * 1.2 : 0;
+        const bob =
+          a.kind === "loot"
+            ? 6 + Math.sin(now * 0.008 + a.id) * 5
+            : a.abductable
+              ? Math.sin(now * 0.004 + a.id) * 1.2
+              : 0;
         spr.position.set(a.x, 8 + lift + bob, a.y);
-        spr.scale.set(a.w, a.h, 1);
-        spr.material.rotation = a.kind === "jeep" ? -a.facing : a.spin ? -a.facing : 0;
+        const pulseLoot = a.kind === "loot" ? 1 + Math.sin(now * 0.01) * 0.12 : 1;
+        spr.scale.set(a.w * pulseLoot, a.h * pulseLoot, 1);
+        spr.material.rotation =
+          a.kind === "jeep" ||
+          a.kind === "tank" ||
+          a.kind === "heli" ||
+          a.kind === "plane" ||
+          a.spin
+            ? -a.facing
+            : 0;
         spr.material.opacity = a.kind === "rubble" ? 0.9 : a.flash > 0 ? 0.75 : 1;
         spr.material.color.setHex(a.flash > 0 ? 0xffffff : 0xffffff);
         spr.renderOrder = a.y;

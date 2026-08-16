@@ -110,6 +110,65 @@ export class AudioBus {
     haptics.hurt();
   }
 
+  plea() {
+    this.env(340, "triangle", 0.22, 0.07, 280);
+    this.env(520, "sine", 0.28, 0.05, 400);
+  }
+
+  scream() {
+    if (!this.ctx || !this.sfx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const f = this.ctx.createBiquadFilter();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(420 + Math.random() * 80, t);
+    o.frequency.exponentialRampToValueAtTime(720 + Math.random() * 160, t + 0.12);
+    o.frequency.exponentialRampToValueAtTime(280, t + 0.42);
+    f.type = "bandpass";
+    f.frequency.value = 1400;
+    f.Q.value = 3.2;
+    g.gain.setValueAtTime(0.09, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    o.connect(f);
+    f.connect(g);
+    g.connect(this.sfx);
+    o.start(t);
+    o.stop(t + 0.48);
+    this.noise(0.18, 0.04);
+  }
+
+  cry() {
+    this.env(310, "sine", 0.35, 0.06, 240);
+    this.env(480, "triangle", 0.4, 0.04, 360);
+    this.noise(0.22, 0.03);
+  }
+
+  tank() {
+    this.env(90, "square", 0.16, 0.08, 50);
+    this.noise(0.14, 0.07);
+  }
+
+  heli() {
+    this.env(240, "sawtooth", 0.08, 0.04, 180);
+  }
+
+  jet() {
+    this.env(680, "sawtooth", 0.12, 0.05, 220);
+  }
+
+  upgrade() {
+    this.env(440, "sine", 0.12, 0.07, 880);
+    this.env(660, "triangle", 0.18, 0.05, 990);
+    haptics.tap();
+  }
+
+  cloak() {
+    this.env(180, "sine", 0.28, 0.06, 90);
+    this.env(520, "triangle", 0.22, 0.04, 260);
+    haptics.tap();
+  }
+
   startBeam() {
     if (!this.beamBuzzed) {
       this.beamBuzzed = true;

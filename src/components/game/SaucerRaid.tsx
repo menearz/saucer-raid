@@ -2,11 +2,22 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SignedIn, SignedOut, UserButton } from "@/lib/auth/gates";
 import { audio } from "@/game/audio";
 import { loadArt } from "@/game/assets";
+import { CRAFTS, saveCraftId, type CraftId } from "@/game/crafts";
 import { haptics } from "@/game/haptics";
 import { Input } from "@/game/input";
 import type { GameHandle } from "@/game/loop";
 import { useHud } from "@/game/store";
 import { assetUrl } from "@/game/paths";
+import {
+  UPGRADES,
+  buyUpgrade,
+  loadProgress,
+  resetProgress,
+  upgradeCost,
+  type MapMark,
+  type UpgradeId,
+} from "@/game/progress";
+import { ALERTS } from "@/game/types";
 import { createWorld, loadBest } from "@/game/world";
 import { Link } from "@tanstack/react-router";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
@@ -73,10 +84,20 @@ export function SaucerRaid() {
     };
   }, [ready]);
 
-  const begin = () => {
+  const begin = (kind: "start" | "next" | "retry" = "start") => {
+    inputRef.current.reset();
     audio.unlock();
     haptics.unlock();
-    handleRef.current?.start();
+    handleRef.current?.start(kind);
+  };
+
+  const toTitle = () => {
+    inputRef.current.reset();
+    useHud.setState({
+      phase: "title",
+      level: loadProgress().level,
+      salvage: loadProgress().salvage,
+    });
   };
 
   const toggleMute = () => {
@@ -95,6 +116,8 @@ export function SaucerRaid() {
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
       {hud.phase === "playing" && <HudOverlay hud={hud} />}
+      {hud.phase === "playing" && <MiniMap marks={hud.marks} />}
+      {hud.phase === "playing" && <ShoutLayer shouts={hud.shouts} />}
       {hud.phase === "playing" && (
         <TouchLayer
           input={inputRef.current}
@@ -120,9 +143,18 @@ export function SaucerRaid() {
             >
               Resume
             </Primary>
-            <Ghost onClick={begin}>Restart raid</Ghost>
+            <Ghost onClick={() => begin("retry")}>Restart raid</Ghost>
           </div>
         </Overlay>
+      )}
+
+      {hud.phase === "upgrade" && (
+        <UpgradeBay
+          hud={hud}
+          onNext={() => begin("next")}
+          onRetry={() => begin("retry")}
+          onHangar={toTitle}
+        />
       )}
 
       {hud.phase === "over" && (
@@ -133,22 +165,9 @@ export function SaucerRaid() {
           <h2 className="font-display text-6xl leading-none tracking-tight landscape:text-5xl">
             Raid over
           </h2>
-          <p className="mt-3 font-display text-4xl text-accent tabular-nums landscape:mt-2 landscape:text-3xl">
-            {hud.score}
-          </p>
-          <p className="text-xs text-muted">Best {hud.best}</p>
-          {hud.stats && (
-            <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 text-sm landscape:mt-3 landscape:gap-y-1">
-              <Stat k="Abducted" v={hud.stats.abducted} />
-              <Stat k="Destroyed" v={hud.stats.destroyed} />
-              <Stat k="Livestock" v={hud.stats.cows} />
-              <Stat k="People" v={hud.stats.people} />
-              <Stat k="Buildings" v={hud.stats.buildings} />
-              <Stat k="Vehicles" v={hud.stats.vehicles} />
-            </dl>
-          )}
           <div className="mt-6 flex flex-col gap-2 landscape:mt-4">
-            <Primary onClick={begin}>Raid again</Primary>
+            <Primary onClick={() => begin("retry")}>Retry sector</Primary>
+            <Ghost onClick={toTitle}>Hangar</Ghost>
           </div>
         </Overlay>
       )}
@@ -157,7 +176,12 @@ export function SaucerRaid() {
         <TitleScreen
           ready={ready}
           best={hud.best}
-          onStart={begin}
+          onStart={() => begin("start")}
+          onNewCampaign={() => {
+            resetProgress();
+            useHud.setState({ level: 1, salvage: 0 });
+            haptics.tap();
+          }}
           isPending={!pages && isPending}
           hasUser={!pages && !!user}
           showAccount={!pages}
@@ -171,6 +195,7 @@ function TitleScreen({
   ready,
   best,
   onStart,
+  onNewCampaign,
   isPending,
   hasUser,
   showAccount = true,
@@ -178,18 +203,21 @@ function TitleScreen({
   ready: boolean;
   best: number;
   onStart: () => void;
+  onNewCampaign: () => void;
   isPending: boolean;
   hasUser: boolean;
   showAccount?: boolean;
 }) {
+  const level = useHud((s) => s.level);
+  const salvage = useHud((s) => s.salvage);
   return (
-    <div className="absolute inset-0 flex flex-col">
+    <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto overscroll-contain pointer-events-auto [touch-action:manipulation]">
       <img
-        src={assetUrl("/game/title-bg.jpg")}
+        src={assetUrl("/game/title-bg.png")}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover object-[center_30%] landscape:object-center"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_30%] landscape:object-center"
       />
-      <div className="absolute inset-0 bg-linear-to-b from-bg/25 via-bg/45 to-bg/92 landscape:bg-linear-to-r landscape:from-bg/88 landscape:via-bg/50 landscape:to-bg/10" />
+      <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-bg/25 via-bg/45 to-bg/92 landscape:bg-linear-to-r landscape:from-bg/88 landscape:via-bg/50 landscape:to-bg/10" />
       <header className="relative z-10 flex items-center justify-end px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))]">
         {!showAccount ? null : isPending ? (
           <div className="h-8 w-24 animate-pulse rounded-full bg-fg/10" />
@@ -210,41 +238,120 @@ function TitleScreen({
           </SignedOut>
         )}
       </header>
-      <div className="relative z-10 mt-auto px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))] landscape:mt-0 landscape:flex landscape:h-full landscape:w-[min(30rem,56%)] landscape:flex-col landscape:justify-center landscape:pb-6">
+      <div className="relative z-10 mt-auto px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))] landscape:mt-0 landscape:flex landscape:min-h-full landscape:w-[min(32rem,58%)] landscape:flex-col landscape:justify-center landscape:pb-6">
         <p className="text-xs font-medium uppercase tracking-[0.28em] text-accent">
-          Night raid
+          Sector {level}
         </p>
         <h1 className="font-display text-7xl leading-[0.85] tracking-tight sm:text-8xl landscape:text-6xl">
           Saucer
           <br />
           Raid
         </h1>
-        <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted landscape:mt-2 landscape:text-[13px]">
-          Fly the disc. Abduct livestock and townsfolk. Carve barns, homes, and
-          trucks with the laser. Heat draws jeeps. Score everything.
-        </p>
-        <ul className="mt-4 space-y-1 text-xs text-faint landscape:hidden">
-          <li>Stick or WASD — fly. A left, D right.</li>
-          <li>Hold Beam to abduct. Hold Fire or click to blast.</li>
-          <li>Turn the phone sideways for a wider valley.</li>
-        </ul>
-        <p className="mt-2 hidden text-xs text-faint landscape:block">
-          Left stick flies. Beam abducts. Fire blasts. Phone sideways is the full raid.
+        <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted landscape:mt-2">
+          Survive the clock to reach the next sector. Military stacks. Upgrade
+          the disc between raids.
         </p>
         {best > 0 && (
           <p className="mt-3 text-xs text-muted landscape:mt-2">
             Best <span className="tabular-nums text-fg">{best}</span>
+            {salvage > 0 && (
+              <>
+                {" "}
+                · Salvage <span className="tabular-nums text-fg">{salvage}</span>
+              </>
+            )}
           </p>
         )}
+        <Hangar />
         <button
           type="button"
           disabled={!ready}
-          onClick={onStart}
-          className="mt-5 h-12 w-full max-w-xs rounded-[20px] bg-fg px-6 font-medium text-bg transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-50 landscape:mt-4"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (ready) onStart();
+          }}
+          className="mt-4 h-12 w-full max-w-xs rounded-[20px] bg-fg px-6 font-medium text-bg transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-50 landscape:mt-3"
         >
-          {ready ? "Begin raid" : "Loading the valley…"}
+          {ready ? `Launch sector ${level}` : "Loading the valley…"}
         </button>
+        {level > 1 && (
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onNewCampaign();
+            }}
+            className="mt-2 h-10 text-xs text-muted"
+          >
+            New campaign
+          </button>
+        )}
       </div>
+    </div>
+  );
+}
+
+function Hangar() {
+  const craftId = useHud((s) => s.craftId);
+  const pick = (id: CraftId) => {
+    saveCraftId(id);
+    useHud.setState({ craftId: id });
+    audio.ui();
+    haptics.tap();
+  };
+  return (
+    <div className="mt-4 landscape:mt-3">
+      <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
+        Hangar
+      </p>
+      <div className="grid grid-cols-2 gap-2 max-w-sm">
+        {CRAFTS.map((c) => {
+          const on = craftId === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                pick(c.id);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                pick(c.id);
+              }}
+              className={`min-h-11 rounded-[14px] border px-3 py-2.5 text-left ${
+                on ? "border-accent bg-accent/15" : "border-border bg-surface/70"
+              }`}
+            >
+              <p className="text-[10px] uppercase tracking-widest text-accent">{c.tag}</p>
+              <p className="text-sm font-medium leading-tight">{c.name}</p>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1.5 max-w-sm text-xs leading-snug text-muted">
+        {CRAFTS.find((c) => c.id === craftId)?.blurb}
+      </p>
+    </div>
+  );
+}
+
+function ShoutLayer({
+  shouts,
+}: {
+  shouts: { id: number; text: string; x: number; y: number; life: number; max: number }[];
+}) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-15">
+      {shouts.map((s) => (
+        <div
+          key={`${s.id}-${s.text}`}
+          className="absolute -translate-x-1/2 -translate-y-full rounded-full border border-fg/15 bg-surface/90 px-2.5 py-1 text-[11px] font-medium text-fg shadow-md"
+          style={{ left: s.x, top: s.y, opacity: Math.max(0.15, s.life / s.max) }}
+        >
+          {s.text}
+        </div>
+      ))}
     </div>
   );
 }
@@ -261,18 +368,30 @@ function HudOverlay({
     maxHp: number;
     abducted: number;
     destroyed: number;
+    alert: string;
+    weaponTier: number;
+    cloakT: number;
+    level: number;
+    shield: number;
+    shieldMax: number;
   };
 }) {
   const m = Math.floor(hud.timeLeft / 60);
   const s = Math.floor(hud.timeLeft % 60)
     .toString()
     .padStart(2, "0");
+  const alert = ALERTS.find((a) => a.id === hud.alert) ?? ALERTS[0]!;
+  const hot = hud.alert === "hostile" || hud.alert === "air-raid";
+  const weapon = ["Laser", "Laser+", "Twin", "Spread"][Math.min(3, hud.weaponTier)] ?? "Laser";
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-display text-4xl leading-none tabular-nums landscape:text-3xl">
             {hud.score}
+          </p>
+          <p className="text-[10px] uppercase tracking-widest text-muted">
+            Sector {hud.level}
           </p>
           {hud.combo > 1 && (
             <p className="text-xs font-medium uppercase tracking-widest text-accent">
@@ -292,7 +411,7 @@ function HudOverlay({
       <div className="mt-2 flex items-center gap-2 landscape:mt-1">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
           <div
-            className="h-full rounded-full bg-danger transition-[width] duration-150"
+            className={`h-full rounded-full transition-[width] duration-150 ${hot ? "bg-danger" : "bg-accent"}`}
             style={{ width: `${Math.min(100, hud.heat)}%` }}
           />
         </div>
@@ -303,9 +422,155 @@ function HudOverlay({
               className={`h-2 w-2 rounded-full ${i < hud.hp ? "bg-accent" : "bg-surface-2"}`}
             />
           ))}
+          {hud.shieldMax > 0 &&
+            Array.from({ length: Math.ceil(hud.shieldMax) }).map((_, i) => (
+              <span
+                key={`s${i}`}
+                className={`h-2 w-2 rounded-full ${i < hud.shield ? "bg-warn" : "bg-surface-2"}`}
+              />
+            ))}
         </div>
       </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <p
+          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] ${
+            hot ? "bg-danger/20 text-danger" : "bg-surface/80 text-muted"
+          }`}
+        >
+          {alert.label}
+        </p>
+        {hud.weaponTier > 0 && (
+          <p className="inline-flex rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-accent">
+            {weapon}
+          </p>
+        )}
+        {hud.cloakT > 0 && (
+          <p className="inline-flex rounded-full bg-fg/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-fg">
+            Cloak {hud.cloakT.toFixed(1)}s
+          </p>
+        )}
+      </div>
     </div>
+  );
+}
+
+function MiniMap({ marks }: { marks: MapMark[] }) {
+  return (
+    <div className="pointer-events-none absolute bottom-[max(9.5rem,calc(env(safe-area-inset-bottom)+8.5rem))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 landscape:top-[max(4.25rem,calc(env(safe-area-inset-top)+3.4rem))] landscape:bottom-auto">
+      <div className="relative h-28 w-28 overflow-hidden rounded-lg border border-border bg-bg/70 landscape:h-24 landscape:w-24">
+        {marks.map((m, i) => (
+          <span
+            key={`${m.t}-${i}`}
+            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full ${
+              m.t === "you"
+                ? "size-2 bg-accent"
+                : m.t === "gun"
+                  ? "size-1.5 bg-warn"
+                  : m.t === "cloak"
+                    ? "size-1.5 bg-fg"
+                    : m.t === "loot"
+                      ? "size-1.5 bg-accent"
+                      : m.t === "tank"
+                        ? "size-1.5 bg-danger"
+                        : m.t === "heli" || m.t === "plane"
+                          ? "size-1 bg-danger"
+                          : "size-1 bg-danger/80"
+            }`}
+            style={{ left: `${m.x * 100}%`, top: `${m.y * 100}%` }}
+          />
+        ))}
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-2 text-[9px] uppercase tracking-widest text-faint">
+        <span className="text-warn">Gun</span>
+        <span className="text-fg">Cloak</span>
+        <span className="text-danger">Army</span>
+      </div>
+    </div>
+  );
+}
+
+function UpgradeBay({
+  hud,
+  onNext,
+  onRetry,
+  onHangar,
+}: {
+  hud: {
+    score: number;
+    best: number;
+    reason: string;
+    level: number;
+    salvage: number;
+    stats: { abducted: number; destroyed: number; cows: number; people: number; buildings: number; vehicles: number } | null;
+  };
+  onNext: () => void;
+  onRetry: () => void;
+  onHangar: () => void;
+}) {
+  const [tick, setTick] = useState(0);
+  const p = loadProgress();
+  const survived = hud.reason === "time";
+  const buy = (id: UpgradeId) => {
+    buyUpgrade(loadProgress(), id);
+    useHud.setState({ salvage: loadProgress().salvage });
+    audio.upgrade();
+    setTick((n) => n + 1);
+    void tick;
+  };
+  return (
+    <Overlay>
+      <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">
+        {survived ? `Sector ${hud.level} cleared` : "Saucer down"}
+      </p>
+      <h2 className="font-display text-5xl leading-none tracking-tight landscape:text-4xl">
+        {survived ? "Upgrade bay" : "Refit"}
+      </h2>
+      <p className="mt-2 font-display text-3xl text-accent tabular-nums">{hud.score}</p>
+      <p className="text-xs text-muted">
+        Salvage <span className="tabular-nums text-fg">{p.salvage}</span>
+        {hud.stats ? ` · ${hud.stats.abducted} taken · ${hud.stats.destroyed} wrecked` : ""}
+      </p>
+      <ul className="mt-4 space-y-2">
+        {UPGRADES.map((u) => {
+          const rank = p.upgrades[u.id] ?? 0;
+          const cost = upgradeCost(rank);
+          const maxed = rank >= u.max;
+          const poor = p.salvage < cost;
+          return (
+            <li key={u.id} className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">
+                  {u.name}{" "}
+                  <span className="text-xs text-muted">
+                    {rank}/{u.max}
+                  </span>
+                </p>
+                <p className="text-xs text-faint">{u.blurb}</p>
+              </div>
+              <button
+                type="button"
+                disabled={maxed || poor}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  if (!maxed && !poor) buy(u.id);
+                }}
+                className="h-10 min-w-16 rounded-full border border-border bg-surface-2 px-3 text-xs disabled:opacity-40"
+              >
+                {maxed ? "Max" : `${cost}`}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-5 flex flex-col gap-2">
+        {survived ? (
+          <Primary onClick={onNext}>Next sector</Primary>
+        ) : (
+          <Primary onClick={onRetry}>Retry sector</Primary>
+        )}
+        <Ghost onClick={onHangar}>Hangar</Ghost>
+      </div>
+    </Overlay>
   );
 }
 
@@ -322,6 +587,15 @@ function TouchLayer({
 }) {
   const moveRef = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0, show: false });
+
+  useEffect(() => {
+    return () => {
+      input.sticks = input.sticks.filter((s) => s.kind !== "move");
+      input.setBeam(false);
+      input.setFire(false);
+      setKnob({ x: 0, y: 0, show: false });
+    };
+  }, [input]);
 
   return (
     <>
@@ -443,7 +717,10 @@ function IconBtn({
     <button
       type="button"
       aria-label={label}
-      onClick={onClick}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       className="grid size-11 place-items-center rounded-full border border-border bg-surface/80 text-fg landscape:size-10"
     >
       {children}
@@ -453,7 +730,7 @@ function IconBtn({
 
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
-    <div className="absolute inset-0 z-30 flex items-end justify-center bg-bg/70 px-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pb-16 pt-10 backdrop-blur-[2px] landscape:items-center landscape:pb-6 landscape:pt-6 sm:items-center sm:pb-10">
+    <div className="absolute inset-0 z-30 flex items-end justify-center bg-bg/70 px-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pb-16 pt-10 backdrop-blur-[2px] landscape:items-center landscape:pb-6 landscape:pt-6 sm:items-center sm:pb-10 pointer-events-auto [touch-action:manipulation]">
       <div className="max-h-[min(88dvh,36rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-border bg-surface p-6 shadow-lg landscape:p-5">
         {children}
       </div>
@@ -471,7 +748,10 @@ function Primary({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       className="flex h-12 w-full items-center justify-center gap-2 rounded-[20px] bg-fg font-medium text-bg active:scale-[0.98]"
     >
       <Play className="size-4" />
@@ -490,7 +770,10 @@ function Ghost({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       className="h-11 w-full rounded-[16px] border border-border bg-surface-2 text-sm text-fg"
     >
       {children}

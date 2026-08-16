@@ -1,4 +1,6 @@
-export type Phase = "title" | "playing" | "paused" | "over";
+export type Phase = "title" | "playing" | "paused" | "over" | "upgrade";
+
+export type Alert = "calm" | "uneasy" | "alert" | "hostile" | "air-raid";
 
 export type Kind =
   | "saucer"
@@ -13,16 +15,21 @@ export type Kind =
   | "townhouse"
   | "shop"
   | "silo"
+  | "special"
+  | "loot"
   | "tractor"
   | "pickup"
   | "sedan"
   | "jeep"
+  | "tank"
+  | "heli"
+  | "plane"
   | "prop"
   | "rubble"
   | "laser"
   | "bullet";
 
-export type Terrain = 0 | 1 | 2 | 3; // grass, wheat, dirt, asphalt
+export type Terrain = 0 | 1 | 2 | 3;
 
 export type Actor = {
   id: number;
@@ -60,6 +67,9 @@ export type Actor = {
   drag?: number;
   knockX?: number;
   knockY?: number;
+  dmg?: number;
+  shouted?: boolean;
+  loot?: "weapon" | "cloak";
 };
 
 export type Particle = {
@@ -79,6 +89,15 @@ export type Popup = {
   x: number;
   y: number;
   text: string;
+  life: number;
+  max: number;
+};
+
+export type Shout = {
+  id: number;
+  text: string;
+  x: number;
+  y: number;
   life: number;
   max: number;
 };
@@ -118,6 +137,19 @@ export type GameState = {
   seed: number;
   stats: Stats;
   reason: "time" | "destroyed" | "";
+  alert: Alert;
+  craftId: string;
+  beamR: number;
+  laserMult: number;
+  fireRate: number;
+  speed: number;
+  heatMult: number;
+  weaponTier: number;
+  cloakT: number;
+  level: number;
+  shield: number;
+  shieldMax: number;
+  abductMul: number;
 };
 
 export const TILE = 72;
@@ -143,11 +175,15 @@ export const POINTS: Record<string, number> = {
   pickup: 300,
   sedan: 240,
   jeep: 480,
+  tank: 900,
+  heli: 760,
+  plane: 820,
   barn: 900,
   farmhouse: 780,
   townhouse: 680,
   shop: 820,
   silo: 540,
+  special: 1100,
 };
 
 export const HEAT_GAIN: Record<string, number> = {
@@ -161,9 +197,40 @@ export const HEAT_GAIN: Record<string, number> = {
   pickup: 6,
   sedan: 5,
   jeep: 3,
+  tank: 4,
+  heli: 3,
+  plane: 3,
   barn: 12,
   farmhouse: 11,
   townhouse: 10,
   shop: 12,
   silo: 8,
+  special: 6,
 };
+
+export const ALERTS: { id: Alert; min: number; label: string }[] = [
+  { id: "calm", min: 0, label: "Calm valley" },
+  { id: "uneasy", min: 18, label: "Uneasy" },
+  { id: "alert", min: 40, label: "Military alert" },
+  { id: "hostile", min: 62, label: "Hostile air" },
+  { id: "air-raid", min: 85, label: "Air raid" },
+];
+
+export function alertFromHeat(heat: number): Alert {
+  let id: Alert = "calm";
+  for (const a of ALERTS) if (heat >= a.min) id = a.id;
+  return id;
+}
+
+export const HUMAN_LINES = [
+  "Don't probe me!",
+  "AAAAHHH!",
+  "Help!",
+  "Not the lights!",
+  "I have kids!",
+  "Please no!",
+  "*sobbing*",
+  "Get off!",
+  "Why me?!",
+  "I'm not cattle!",
+];

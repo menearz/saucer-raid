@@ -1,15 +1,17 @@
 import { audio } from "./audio";
 import { createGlRenderer } from "./gl";
 import type { Input } from "./input";
-import { startRaid, step, screenToWorld } from "./sim";
+import { smashNearestSpecial, startRaid, step, screenToWorld, worldToScreen } from "./sim";
 import { patchHud } from "./store";
 import { loadBest, type World } from "./world";
+import { loadProgress, type MapMark } from "./progress";
+import { WORLD_H, WORLD_W } from "./types";
 
 const STEP = 1 / 60;
 
 export type GameHandle = {
   destroy: () => void;
-  start: () => void;
+  start: (kind?: "start" | "next" | "retry") => void;
   pause: () => void;
   resume: () => void;
   world: World;
@@ -25,6 +27,7 @@ export function runGame(
   let acc = 0;
   let hudT = 0;
   let running = true;
+  let lastPhase = world.state.phase;
   const gl = createGlRenderer(canvas);
 
   const resize = () => {
@@ -44,12 +47,47 @@ export function runGame(
       getY: () => world.saucer.y,
       setKeys: (codes) => input.setKeys(codes),
       setSteer: (v) => input.setSteer(v),
+      restart: () => {
+        input.reset();
+        startRaid(world, "retry");
+        last = performance.now();
+        acc = 0;
+        flushHud();
+      },
+      getMove: () => ({ x: input.actions.moveX, y: input.actions.moveY }),
+      smashNearestSpecial: () => smashNearestSpecial(world),
+      getLoot: () => world.actors.filter((a) => a.kind === "loot" && !a.dead).length,
+      getTier: () => world.state.weaponTier,
+      getCloak: () => world.state.cloakT,
+      getLevel: () => world.state.level,
+      endSector: () => {
+        world.state.timeLeft = 0.05;
+      },
     };
   };
   probe();
 
   const flushHud = () => {
     const st = world.state;
+    const zoom = world.state.camZoom || 1;
+    const marks: MapMark[] = [
+      { x: world.saucer.x / WORLD_W, y: world.saucer.y / WORLD_H, t: "you" },
+    ];
+    for (const a of world.actors) {
+      if (a.dead) continue;
+      if (a.kind === "special") {
+        marks.push({
+          x: a.x / WORLD_W,
+          y: a.y / WORLD_H,
+          t: a.loot === "cloak" ? "cloak" : "gun",
+        });
+      } else if (a.kind === "loot") {
+        marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: "loot" });
+      } else if (a.kind === "jeep" || a.kind === "tank" || a.kind === "heli" || a.kind === "plane") {
+        marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: a.kind });
+      }
+    }
+    const prog = loadProgress();
     patchHud({
       phase: st.phase,
       score: st.score,
@@ -63,6 +101,19 @@ export function runGame(
       best: Math.max(loadBest(), st.score),
       stats: st.stats,
       reason: st.reason,
+      alert: st.alert,
+      craftId: (st.craftId as "disc") || "disc",
+      shouts: (world.shouts ?? []).map((s) => {
+        const p = worldToScreen(world, s.x, s.y, canvas.clientWidth, canvas.clientHeight, zoom);
+        return { ...s, x: p.x, y: p.y };
+      }),
+      weaponTier: st.weaponTier ?? 0,
+      cloakT: st.cloakT ?? 0,
+      level: st.level || prog.level,
+      salvage: prog.salvage,
+      shield: st.shield ?? 0,
+      shieldMax: st.shieldMax ?? 0,
+      marks,
     });
   };
 
@@ -110,6 +161,11 @@ export function runGame(
       acc -= STEP;
     }
 
+    if (lastPhase === "playing" && world.state.phase !== "playing") {
+      input.reset();
+    }
+    lastPhase = world.state.phase;
+
     gl.render(world, now);
 
     hudT += dt;
@@ -135,9 +191,10 @@ export function runGame(
       gl.dispose();
       delete window.__controlsTest;
     },
-    start() {
+    start(kind: "start" | "next" | "retry" = "start") {
+      input.reset();
       audio.unlock();
-      startRaid(world);
+      startRaid(world, kind);
       last = performance.now();
       acc = 0;
       flushHud();
@@ -162,6 +219,14 @@ declare global {
       getY?: () => number;
       setKeys?: (codes: string[]) => void;
       setSteer?: (v: number) => void;
+      restart?: () => void;
+      getMove?: () => { x: number; y: number };
+      smashNearestSpecial?: () => boolean;
+      getLoot?: () => number;
+      getTier?: () => number;
+      getCloak?: () => number;
+      getLevel?: () => number;
+      endSector?: () => void;
     };
   }
 }

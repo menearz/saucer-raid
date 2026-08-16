@@ -25,6 +25,16 @@ const PATHS = {
     "pickup",
     "sedan",
     "jeep",
+    "tank",
+    "heli",
+    "plane",
+    "craft-scout",
+    "craft-barge",
+    "craft-phantom",
+    "special-armory",
+    "special-cloak",
+    "pickup-weapon",
+    "pickup-cloak",
   ],
   props: ["hay", "tree", "pine", "bush", "fence", "mailbox", "crate", "barrel", "pole"],
   tiles: ["grass", "wheat", "dirt", "asphalt"],
@@ -72,7 +82,7 @@ export async function loadArt(): Promise<Art> {
       Promise.all(PATHS.singles.map((n) => loadImage(assetUrl(`/game/${n}.png`)))),
       Promise.all(PATHS.props.map((n) => loadImage(assetUrl(`/game/props/${n}.png`)))),
       Promise.all(PATHS.tiles.map((n) => loadImage(assetUrl(`/game/tiles/${n}.png`)))),
-      loadImage(assetUrl("/game/title-bg.jpg")).catch(() => null),
+      loadImage(assetUrl("/game/title-bg.png")).catch(() => null),
     ]);
   art.saucer = saucer;
   art.explode = explode;

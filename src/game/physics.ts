@@ -14,11 +14,16 @@ const MASS: Record<string, number> = {
   pickup: 7,
   sedan: 5.5,
   jeep: 8,
+  tank: 18,
+  heli: 6,
+  plane: 5,
   barn: 0,
   farmhouse: 0,
   townhouse: 0,
   shop: 0,
   silo: 0,
+  special: 0,
+  loot: 0.4,
   prop: 0,
   rubble: 2.2,
   laser: 0.2,
@@ -160,13 +165,13 @@ export function blast(w: World, x: number, y: number, radius: number, force: num
   }
 }
 
-export function beamPull(a: Actor, sx: number, sy: number, dt: number) {
+export function beamPull(a: Actor, sx: number, sy: number, dt: number, rate = 1) {
   const k = 22;
   const c = 6;
   const fx = (sx - a.x) * k - a.vx * c;
   const fy = (sy - 16 - a.y) * k - a.vy * c;
   applyImpulse(a, fx * dt * 18, fy * dt * 18);
-  a.lift += dt;
+  a.lift += dt * rate;
 }
 
 export function collideWorld(w: World) {

@@ -7,12 +7,9 @@ artifacts
 screenshots
 attachments
 assets
+docs
 .grok
-.project_id
-.node_modules.lock
 *.log
-.env
-.env.*
-!.env.example
 *.jpg
 *.jpeg
+AGENTS.md
