@@ -1,4 +1,5 @@
 import { audio } from "./audio";
+import type { CraftId } from "./crafts";
 import { createGlRenderer } from "./gl";
 import type { Input } from "./input";
 import { smashNearestSpecial, startRaid, step, screenToWorld, worldToScreen } from "./sim";
@@ -102,7 +103,9 @@ export function runGame(
       stats: st.stats,
       reason: st.reason,
       alert: st.alert,
-      craftId: (st.craftId as "disc") || "disc",
+      ...(st.phase === "playing"
+        ? { craftId: (st.craftId as CraftId) || "disc" }
+        : {}),
       shouts: (world.shouts ?? []).map((s) => {
         const p = worldToScreen(world, s.x, s.y, canvas.clientWidth, canvas.clientHeight, zoom);
         return { ...s, x: p.x, y: p.y };

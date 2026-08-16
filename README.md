@@ -19,7 +19,7 @@ Works portrait and landscape. The phone buzzes on Android.
 
 ## Campaign
 
-- Hangar: Classic Disc, Needle Scout, War Barge, Phantom
+- Hangar: Classic Disc, Yoke Runner, Chrome Spike, Long Ember, Pale Keel, Twin Wake
 - Minimap: amber = guns, pale = cloaks, red = army
 - Survive the timer → upgrade bay → next sector (harder army)
 - Salvage buys engines, tractor, armor, shields, cannons

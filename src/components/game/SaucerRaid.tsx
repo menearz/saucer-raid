@@ -2,7 +2,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SignedIn, SignedOut, UserButton } from "@/lib/auth/gates";
 import { audio } from "@/game/audio";
 import { loadArt } from "@/game/assets";
-import { CRAFTS, saveCraftId, type CraftId } from "@/game/crafts";
+import { CRAFTS, cycleCraftId, saveCraftId, type Craft, type CraftId } from "@/game/crafts";
 import { haptics } from "@/game/haptics";
 import { Input } from "@/game/input";
 import type { GameHandle } from "@/game/loop";
@@ -20,7 +20,7 @@ import {
 import { ALERTS } from "@/game/types";
 import { createWorld, loadBest } from "@/game/world";
 import { Link } from "@tanstack/react-router";
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function SaucerRaid() {
@@ -217,7 +217,7 @@ function TitleScreen({
         alt=""
         className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_30%] landscape:object-center"
       />
-      <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-bg/25 via-bg/45 to-bg/92 landscape:bg-linear-to-r landscape:from-bg/88 landscape:via-bg/50 landscape:to-bg/10" />
+      <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-bg/62 via-bg/70 to-bg/95 landscape:bg-linear-to-r landscape:from-bg/94 landscape:via-bg/72 landscape:to-bg/58" />
       <header className="relative z-10 flex items-center justify-end px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))]">
         {!showAccount ? null : isPending ? (
           <div className="h-8 w-24 animate-pulse rounded-full bg-fg/10" />
@@ -238,101 +238,239 @@ function TitleScreen({
           </SignedOut>
         )}
       </header>
-      <div className="relative z-10 mt-auto px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))] landscape:mt-0 landscape:flex landscape:min-h-full landscape:w-[min(32rem,58%)] landscape:flex-col landscape:justify-center landscape:pb-6">
-        <p className="text-xs font-medium uppercase tracking-[0.28em] text-accent">
-          Sector {level}
-        </p>
-        <h1 className="font-display text-7xl leading-[0.85] tracking-tight sm:text-8xl landscape:text-6xl">
-          Saucer
-          <br />
-          Raid
-        </h1>
-        <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted landscape:mt-2">
-          Survive the clock to reach the next sector. Military stacks. Upgrade
-          the disc between raids.
-        </p>
-        {best > 0 && (
-          <p className="mt-3 text-xs text-muted landscape:mt-2">
-            Best <span className="tabular-nums text-fg">{best}</span>
-            {salvage > 0 && (
-              <>
-                {" "}
-                · Salvage <span className="tabular-nums text-fg">{salvage}</span>
-              </>
-            )}
+      <div className="relative z-10 flex flex-1 flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] landscape:flex-row landscape:items-center landscape:gap-6 landscape:px-8">
+        <div className="landscape:w-[min(26rem,42%)] landscape:shrink-0">
+          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-accent">
+            Sector {level}
           </p>
-        )}
-        <Hangar />
-        <button
-          type="button"
-          disabled={!ready}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            if (ready) onStart();
-          }}
-          className="mt-4 h-12 w-full max-w-xs rounded-[20px] bg-fg px-6 font-medium text-bg transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-50 landscape:mt-3"
-        >
-          {ready ? `Launch sector ${level}` : "Loading the valley…"}
-        </button>
-        {level > 1 && (
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              onNewCampaign();
-            }}
-            className="mt-2 h-10 text-xs text-muted"
-          >
-            New campaign
-          </button>
-        )}
+          <h1 className="font-display text-5xl leading-[0.85] tracking-tight sm:text-6xl landscape:text-6xl">
+            Saucer
+            <br />
+            Raid
+          </h1>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted landscape:mt-2">
+            Pick a hull. Survive the clock. Upgrade between raids.
+          </p>
+          {best > 0 && (
+            <p className="mt-2 text-xs text-muted">
+              Best <span className="tabular-nums text-fg">{best}</span>
+              {salvage > 0 && (
+                <>
+                  {" "}
+                  · Salvage <span className="tabular-nums text-fg">{salvage}</span>
+                </>
+              )}
+            </p>
+          )}
+          <div className="hidden landscape:block">
+            <HangarInfo />
+            <LaunchButton ready={ready} level={level} onStart={onStart} />
+            {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
+          </div>
+        </div>
+        <HangarPreview />
+        <div className="landscape:hidden">
+          <HangarInfo />
+          <LaunchButton ready={ready} level={level} onStart={onStart} />
+          {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
+        </div>
       </div>
     </div>
   );
 }
 
-function Hangar() {
+function pickCraft(id: CraftId) {
+  saveCraftId(id);
+  useHud.setState({ craftId: id });
+  audio.ui();
+  haptics.tap();
+}
+
+function selectedCraft(craftId: CraftId): Craft {
+  return CRAFTS.find((c) => c.id === craftId) ?? CRAFTS[0]!;
+}
+
+function HangarPreview() {
   const craftId = useHud((s) => s.craftId);
-  const pick = (id: CraftId) => {
-    saveCraftId(id);
-    useHud.setState({ craftId: id });
-    audio.ui();
-    haptics.tap();
-  };
+  const craft = selectedCraft(craftId);
+  const swipeX = useRef<number | null>(null);
+  const src = assetUrl(`/game/${craft.portrait}.png`);
   return (
-    <div className="mt-4 landscape:mt-3">
-      <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-2 landscape:py-0">
+      <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
         Hangar
       </p>
-      <div className="grid grid-cols-2 gap-2 max-w-sm">
+      <div
+        className="relative flex w-full max-w-lg items-center justify-center"
+        onPointerDown={(e) => {
+          swipeX.current = e.clientX;
+        }}
+        onPointerUp={(e) => {
+          if (swipeX.current == null) return;
+          const dx = e.clientX - swipeX.current;
+          swipeX.current = null;
+          if (dx > 48) pickCraft(cycleCraftId(craftId, -1));
+          else if (dx < -48) pickCraft(cycleCraftId(craftId, 1));
+        }}
+        onPointerCancel={() => {
+          swipeX.current = null;
+        }}
+      >
+        <button
+          type="button"
+          aria-label="Previous craft"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            pickCraft(cycleCraftId(craftId, -1));
+          }}
+          className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-surface/80 text-fg landscape:size-10"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <div className="relative mx-1 flex h-[min(42dvh,20rem)] w-full items-center justify-center landscape:h-[min(62dvh,26rem)]">
+          <div className="pointer-events-none absolute inset-[12%] rounded-full bg-bg/75 blur-2xl" />
+          <img
+            key={craft.id}
+            src={src}
+            alt={craft.name}
+            draggable={false}
+            className="hangar-bob relative max-h-full max-w-full object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.55)]"
+          />
+        </div>
+        <button
+          type="button"
+          aria-label="Next craft"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            pickCraft(cycleCraftId(craftId, 1));
+          }}
+          className="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-surface/80 text-fg landscape:size-10"
+        >
+          <ChevronRight className="size-5" />
+        </button>
+      </div>
+      <div className="mt-2 flex w-full max-w-md flex-wrap justify-center gap-1.5">
         {CRAFTS.map((c) => {
           const on = craftId === c.id;
           return (
             <button
               key={c.id}
               type="button"
+              aria-label={c.name}
+              aria-pressed={on}
               onPointerDown={(e) => {
                 e.stopPropagation();
-                pick(c.id);
+                pickCraft(c.id);
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                pick(c.id);
+                pickCraft(c.id);
               }}
-              className={`min-h-11 rounded-[14px] border px-3 py-2.5 text-left ${
-                on ? "border-accent bg-accent/15" : "border-border bg-surface/70"
+              className={`grid size-12 place-items-center overflow-hidden rounded-lg border bg-surface/80 p-0.5 landscape:size-14 ${
+                on ? "border-accent bg-accent/15" : "border-border"
               }`}
             >
-              <p className="text-[10px] uppercase tracking-widest text-accent">{c.tag}</p>
-              <p className="text-sm font-medium leading-tight">{c.name}</p>
+              <img
+                src={assetUrl(`/game/${c.portrait}.png`)}
+                alt=""
+                draggable={false}
+                className="h-full w-full object-contain"
+              />
             </button>
           );
         })}
       </div>
-      <p className="mt-1.5 max-w-sm text-xs leading-snug text-muted">
-        {CRAFTS.find((c) => c.id === craftId)?.blurb}
-      </p>
     </div>
+  );
+}
+
+function HangarInfo() {
+  const craftId = useHud((s) => s.craftId);
+  const craft = selectedCraft(craftId);
+  return (
+    <div className="mt-3 max-w-sm landscape:mt-4">
+      <p className="text-[10px] uppercase tracking-widest text-accent">{craft.tag}</p>
+      <p className="font-display text-3xl leading-none tracking-tight landscape:text-4xl">
+        {craft.name}
+      </p>
+      <p className="mt-1 text-xs leading-snug text-muted">{craft.blurb}</p>
+      <div className="mt-3 space-y-1.5">
+        <StatBar label="Speed" value={craft.speed} max={STAT_MAX.speed} />
+        <StatBar label="Hull" value={craft.hp} max={STAT_MAX.hp} />
+        <StatBar label="Beam" value={craft.beam} max={STAT_MAX.beam} />
+        <StatBar label="Laser" value={craft.laser} max={STAT_MAX.laser} />
+        <StatBar
+          label="Cool"
+          value={STAT_MAX.heat - craft.heatMult}
+          max={STAT_MAX.heat - STAT_MIN.heat}
+        />
+      </div>
+    </div>
+  );
+}
+
+const STAT_MAX = {
+  speed: Math.max(...CRAFTS.map((c) => c.speed)),
+  hp: Math.max(...CRAFTS.map((c) => c.hp)),
+  beam: Math.max(...CRAFTS.map((c) => c.beam)),
+  laser: Math.max(...CRAFTS.map((c) => c.laser)),
+  heat: Math.max(...CRAFTS.map((c) => c.heatMult)),
+};
+
+const STAT_MIN = {
+  heat: Math.min(...CRAFTS.map((c) => c.heatMult)),
+};
+
+function StatBar({ label, value, max }: { label: string; value: number; max: number }) {
+  const pct = Math.max(8, Math.min(100, Math.round((value / max) * 100)));
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-11 shrink-0 text-[9px] uppercase tracking-widest text-faint">
+        {label}
+      </span>
+      <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
+        <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function LaunchButton({
+  ready,
+  level,
+  onStart,
+}: {
+  ready: boolean;
+  level: number;
+  onStart: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={!ready}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        if (ready) onStart();
+      }}
+      className="mt-4 h-12 w-full max-w-xs rounded-[20px] bg-fg px-6 font-medium text-bg transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-50 landscape:mt-4"
+    >
+      {ready ? `Launch sector ${level}` : "Loading the valley…"}
+    </button>
+  );
+}
+
+function NewCampaignButton({ onNewCampaign }: { onNewCampaign: () => void }) {
+  return (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onNewCampaign();
+      }}
+      className="mt-2 h-10 text-xs text-muted"
+    >
+      New campaign
+    </button>
   );
 }
 

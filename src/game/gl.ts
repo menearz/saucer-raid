@@ -317,8 +317,7 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
       const saucerSpr = sprite(-1, craftSprite);
       saucerSpr.position.set(s.x, 18 + hover, s.y);
       saucerSpr.scale.set(s.w, s.h, 1);
-      saucerSpr.material.rotation =
-        w.state.craftId === "scout" || w.state.craftId === "phantom" ? -s.facing : 0;
+      saucerSpr.material.rotation = w.state.craftId !== "disc" ? -s.facing : 0;
       const cloaked = (w.state.cloakT ?? 0) > 0;
       saucerSpr.material.opacity = cloaked
         ? 0.28 + pulse * 0.22
