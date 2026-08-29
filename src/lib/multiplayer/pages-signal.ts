@@ -4,7 +4,7 @@
  *
  * Paths, in order:
  * 1. BroadcastChannel — two tabs on the same origin (github.io or localhost).
- * 2. Public y-webrtc pub/sub (no auth) — two browsers on different machines.
+ * 2. Public ntfy.sh topic (no auth) — two browsers on different machines.
  * 3. Copy-paste handshake tape — works with no relay at all.
  *
  * STUN stays the Google/Cloudflare servers already listed in p2p.ts.
@@ -20,13 +20,9 @@ import {
 } from "./signal-mailbox";
 import type { SignalKind, SignalTransport } from "./p2p";
 
-const RELAYS = [
-  "wss://signaling.yjs.dev",
-  "wss://y-webrtc-signaling-eu.fly.dev",
-  "wss://y-webrtc-signaling-us.fly.dev",
-];
-
+const NTFY = "https://ntfy.sh";
 const HELLO_TTL_MS = 12_000;
+const HELLO_EVERY_MS = 3000;
 
 export function makeRoomCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -50,18 +46,19 @@ export type PagesSignal = SignalTransport & {
 };
 
 export function createPagesSignal(room: string): PagesSignal {
-  const topic = `saucer-raid:${room.toUpperCase()}`;
+  const code = room.toUpperCase();
+  const topic = `sr84-${code.toLowerCase()}`;
+  const localTopic = `saucer-raid:${code}`;
   const box: Mailbox = newMailbox();
   const seen = new Map<string, number>();
   let nextId = Date.now();
   let closed = false;
   let ws: WebSocket | null = null;
-  let relay = 0;
   let retry: ReturnType<typeof setTimeout> | null = null;
-  let ping: ReturnType<typeof setInterval> | null = null;
+  let lastHelloAt = 0;
 
   const channel =
-    typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(topic) : null;
+    typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(localTopic) : null;
 
   const ingest = (msg: WireMsg) => {
     if (msg.t === "hello") seen.set(msg.peer.id, Date.now());
@@ -79,19 +76,17 @@ export function createPagesSignal(room: string): PagesSignal {
     }
   };
 
-  const sendWs = (payload: unknown) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(payload));
-    }
-  };
-
   const broadcast = (msg: WireMsg) => {
     try {
       channel?.postMessage(msg);
     } catch {
       /* private mode */
     }
-    sendWs({ type: "publish", topic, data: msg });
+    void fetch(`${NTFY}/${topic}`, {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: JSON.stringify(msg),
+    }).catch(() => {});
   };
 
   if (channel) {
@@ -102,38 +97,26 @@ export function createPagesSignal(room: string): PagesSignal {
   }
 
   const connectRelay = () => {
-    if (closed || relay >= RELAYS.length) return;
-    const url = RELAYS[relay]!;
+    if (closed) return;
     try {
-      ws = new WebSocket(url);
+      ws = new WebSocket(`wss://ntfy.sh/${topic}/ws`);
     } catch {
-      relay += 1;
-      retry = setTimeout(connectRelay, 600);
+      retry = setTimeout(connectRelay, 1500);
       return;
     }
-    ws.onopen = () => {
-      sendWs({ type: "subscribe", topics: [topic] });
-    };
     ws.onmessage = (ev) => {
-      let parsed: { type?: string; topic?: string; data?: WireMsg };
       try {
-        parsed = JSON.parse(String(ev.data)) as typeof parsed;
+        const env = JSON.parse(String(ev.data)) as { event?: string; message?: string };
+        if (env.event !== "message" || !env.message) return;
+        const msg = JSON.parse(env.message) as WireMsg;
+        if (msg && typeof msg === "object" && "t" in msg) ingest(msg);
       } catch {
-        return;
-      }
-      if (parsed.type === "ping") {
-        sendWs({ type: "pong" });
-        return;
-      }
-      const msg = parsed.data;
-      if (parsed.type === "publish" && msg && typeof msg === "object" && "t" in msg) {
-        ingest(msg);
+        /* ignore malformed relay frames */
       }
     };
     ws.onclose = () => {
       if (closed) return;
-      relay += 1;
-      retry = setTimeout(connectRelay, 800);
+      retry = setTimeout(connectRelay, 1500);
     };
     ws.onerror = () => {
       try {
@@ -144,7 +127,6 @@ export function createPagesSignal(room: string): PagesSignal {
     };
   };
   connectRelay();
-  ping = setInterval(() => sendWs({ type: "ping" }), 8000);
 
   return {
     room,
@@ -152,7 +134,6 @@ export function createPagesSignal(room: string): PagesSignal {
     dispose() {
       closed = true;
       if (retry) clearTimeout(retry);
-      if (ping) clearInterval(ping);
       try {
         channel?.close();
       } catch {
@@ -165,7 +146,7 @@ export function createPagesSignal(room: string): PagesSignal {
       }
     },
     exportHandshake() {
-      return exportTape(box, room);
+      return exportTape(box, code);
     },
     importHandshake(raw: string) {
       importTape(box, raw);
@@ -175,7 +156,10 @@ export function createPagesSignal(room: string): PagesSignal {
       sweep();
       const hello: WireMsg = { t: "hello", peer: { id: peer, name } };
       ingest(hello);
-      broadcast(hello);
+      if (Date.now() - lastHelloAt >= HELLO_EVERY_MS) {
+        lastHelloAt = Date.now();
+        broadcast(hello);
+      }
       return pollMailbox(box, peer, name, since);
     },
     async post(body) {

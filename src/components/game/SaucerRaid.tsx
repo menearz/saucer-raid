@@ -276,13 +276,15 @@ function TitleScreen({
             <LaunchButton ready={ready} level={level} onStart={onStart} />
             {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
           </div>
-          <NetBay />
         </div>
         <HangarPreview />
         <div className="landscape:hidden">
           <HangarInfo />
           <LaunchButton ready={ready} level={level} onStart={onStart} />
           {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
+        </div>
+        <div className="w-full max-w-xs landscape:absolute landscape:bottom-4 landscape:left-8">
+          <NetBay />
         </div>
       </div>
     </div>
