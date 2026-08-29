@@ -724,14 +724,14 @@ function TouchLayer({
   onMute: () => void;
 }) {
   const moveRef = useRef<HTMLDivElement>(null);
-  const [knob, setKnob] = useState({ x: 0, y: 0, show: false });
+  const [knob, setKnob] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     return () => {
       input.sticks = input.sticks.filter((s) => s.kind !== "move");
       input.setBeam(false);
       input.setFire(false);
-      setKnob({ x: 0, y: 0, show: false });
+      setKnob({ x: 0, y: 0 });
     };
   }, [input]);
 
@@ -758,7 +758,7 @@ function TouchLayer({
           const y = e.clientY - r.top;
           input.beginStick(e.pointerId, x, y, "move");
           haptics.tap();
-          setKnob({ x: 0, y: 0, show: true });
+          setKnob({ x: 0, y: 0 });
         }}
         onPointerMove={(e) => {
           const el = moveRef.current;
@@ -771,26 +771,24 @@ function TouchLayer({
           if (s) {
             const dx = Math.max(-54, Math.min(54, s.x - s.ox));
             const dy = Math.max(-54, Math.min(54, s.y - s.oy));
-            setKnob({ x: dx, y: dy, show: true });
+            setKnob({ x: dx, y: dy });
           }
         }}
         onPointerUp={(e) => {
           input.endStick(e.pointerId);
-          setKnob({ x: 0, y: 0, show: false });
+          setKnob({ x: 0, y: 0 });
         }}
         onPointerCancel={(e) => {
           input.endStick(e.pointerId);
-          setKnob({ x: 0, y: 0, show: false });
+          setKnob({ x: 0, y: 0 });
         }}
       >
-        {knob.show && (
-          <div className="pointer-events-none absolute bottom-16 left-10 size-28 rounded-full border border-fg/20 bg-fg/5 landscape:bottom-8 landscape:left-8">
-            <div
-              className="absolute left-1/2 top-1/2 size-11 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fg/80"
-              style={{ transform: `translate(calc(-50% + ${knob.x}px), calc(-50% + ${knob.y}px))` }}
-            />
-          </div>
-        )}
+        <div className="pointer-events-none absolute bottom-16 left-10 size-28 rounded-full border border-fg/20 bg-surface/75 backdrop-blur-sm landscape:bottom-8 landscape:left-8">
+          <div
+            className="absolute left-1/2 top-1/2 size-11 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fg/80"
+            style={{ transform: `translate(calc(-50% + ${knob.x}px), calc(-50% + ${knob.y}px))` }}
+          />
+        </div>
       </div>
 
       <div className="absolute bottom-[max(4.25rem,calc(env(safe-area-inset-bottom)+3.25rem))] right-[max(1rem,env(safe-area-inset-right))] z-20 flex items-end gap-3 landscape:bottom-[max(1rem,env(safe-area-inset-bottom))] landscape:flex-col-reverse landscape:gap-2">
