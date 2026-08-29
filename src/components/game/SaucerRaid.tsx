@@ -7,6 +7,7 @@ import {
   makeRoomCode,
   type PagesSignal,
 } from "@/lib/multiplayer/pages-signal";
+import { wingmanWaitMessage } from "@/lib/multiplayer/wingman-status";
 import { audio } from "@/game/audio";
 import { loadArt } from "@/game/assets";
 import { CRAFTS, cycleCraftId, saveCraftId, type Craft, type CraftId } from "@/game/crafts";
@@ -283,9 +284,9 @@ function TitleScreen({
           <LaunchButton ready={ready} level={level} onStart={onStart} />
           {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
         </div>
-        <div className="w-full max-w-xs landscape:absolute landscape:bottom-4 landscape:left-8">
-          <NetBay />
-        </div>
+      </div>
+      <div className="relative z-10 w-full max-w-xs shrink-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
+        <NetBay />
       </div>
     </div>
   );
@@ -476,8 +477,10 @@ function NetBay() {
   const [status, setStatus] = useState("Enter a room code, or Host to make one.");
   const [peers, setPeers] = useState<PeerInfo[]>([]);
   const [tape, setTape] = useState("");
+  const [role, setRole] = useState<"Host" | "Join" | null>(null);
   const roomRef = useRef<P2PRoom | null>(null);
   const signalRef = useRef<PagesSignal | null>(null);
+  const waitStartRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -488,9 +491,30 @@ function NetBay() {
     };
   }, []);
 
+  useEffect(() => {
+    if (role !== "Join") return;
+    const tick = () => {
+      const live = peers.filter((p) => p.connectionState === "connected").length;
+      const msg = wingmanWaitMessage({
+        role,
+        room: code,
+        waitedMs: Date.now() - waitStartRef.current,
+        remoteCount: peers.length,
+        linkedCount: live,
+      });
+      if (msg) setStatus(msg);
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [role, code, peers]);
+
   const connect = (room: string, name: "Host" | "Join") => {
     roomRef.current?.close();
     signalRef.current?.dispose();
+    setPeers([]);
+    setRole(name);
+    waitStartRef.current = Date.now();
     const signal = createPagesSignal(room);
     const selfId = makePeerId();
     const p2p = new P2PRoom({

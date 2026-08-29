@@ -10,6 +10,7 @@ import {
   newMailbox,
   pollMailbox,
 } from "../src/lib/multiplayer/signal-mailbox.ts";
+import { wingmanWaitMessage } from "../src/lib/multiplayer/wingman-status.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const HUD = readFileSync(join(ROOT, "src/components/game/SaucerRaid.tsx"), "utf8");
@@ -47,6 +48,47 @@ test("mailbox poll returns peers and only new signals", () => {
   assert.equal(first.signals.length, 2);
   const again = pollMailbox(box, "b", "Join", 7);
   assert.equal(again.signals.length, 0);
+});
+
+test("join with no remotes errors after a short wait instead of hanging", () => {
+  assert.equal(
+    wingmanWaitMessage({
+      role: "Join",
+      room: "FAKE1",
+      waitedMs: 1000,
+      remoteCount: 0,
+      linkedCount: 0,
+    }),
+    null,
+  );
+  assert.match(
+    wingmanWaitMessage({
+      role: "Join",
+      room: "FAKE1",
+      waitedMs: 8000,
+      remoteCount: 0,
+      linkedCount: 0,
+    }) ?? "",
+    /No one is in room FAKE1/,
+  );
+  assert.equal(
+    wingmanWaitMessage({
+      role: "Join",
+      room: "FAKE1",
+      waitedMs: 8000,
+      remoteCount: 1,
+      linkedCount: 0,
+    }),
+    null,
+  );
+});
+
+test("Launch stays in document flow; wingman panel does not overlay it", () => {
+  assert.doesNotMatch(HUD, /landscape:absolute/);
+  assert.match(HUD, /wingmanWaitMessage/);
+  const launch = HUD.lastIndexOf("<LaunchButton");
+  const net = HUD.indexOf("<NetBay");
+  assert.ok(launch >= 0 && net > launch, "NetBay must stack after Launch");
 });
 
 test("handshake tape round-trips offers without a Node API route", () => {
