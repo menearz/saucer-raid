@@ -52,6 +52,17 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/** One 404 must not reject the whole hangar load. */
+function loadOptional(src: string): Promise<HTMLImageElement | null> {
+  return loadImage(src).catch(() => null);
+}
+
+function keepSheet(frames: (HTMLImageElement | null)[]): HTMLImageElement[] {
+  const first = frames.find((f): f is HTMLImageElement => !!f);
+  if (!first) return [];
+  return frames.map((f) => f ?? first);
+}
+
 export type Art = {
   saucer: HTMLImageElement[];
   explode: HTMLImageElement[];
@@ -77,26 +88,28 @@ export const art: Art = {
 export async function loadArt(): Promise<Art> {
   const [saucer, explode, laser, rubble, singles, props, tiles, title] =
     await Promise.all([
-      Promise.all(PATHS.saucer.map(loadImage)),
-      Promise.all(PATHS.explode.map(loadImage)),
-      Promise.all(PATHS.laser.map(loadImage)),
-      Promise.all(PATHS.rubble.map(loadImage)),
-      Promise.all(PATHS.singles.map((n) => loadImage(assetUrl(`/game/${n}.png`)))),
-      Promise.all(PATHS.props.map((n) => loadImage(assetUrl(`/game/props/${n}.png`)))),
-      Promise.all(PATHS.tiles.map((n) => loadImage(assetUrl(`/game/tiles/${n}.png`)))),
+      Promise.all(PATHS.saucer.map(loadOptional)),
+      Promise.all(PATHS.explode.map(loadOptional)),
+      Promise.all(PATHS.laser.map(loadOptional)),
+      Promise.all(PATHS.rubble.map(loadOptional)),
+      Promise.all(PATHS.singles.map((n) => loadOptional(assetUrl(`/game/${n}.png`)))),
+      Promise.all(PATHS.props.map((n) => loadOptional(assetUrl(`/game/props/${n}.png`)))),
+      Promise.all(PATHS.tiles.map((n) => loadOptional(assetUrl(`/game/tiles/${n}.png`)))),
       loadImage(assetUrl("/game/title-bg.png")).catch(() => null),
     ]);
-  art.saucer = saucer;
-  art.explode = explode;
-  art.laser = laser;
-  art.rubble = rubble;
-  art.tile = tiles;
+  art.saucer = keepSheet(saucer);
+  art.explode = keepSheet(explode);
+  art.laser = keepSheet(laser);
+  art.rubble = keepSheet(rubble);
+  art.tile = tiles.map((im) => im as HTMLImageElement);
   art.title = title;
   PATHS.singles.forEach((n, i) => {
-    art.sprite[n] = singles[i]!;
+    const im = singles[i];
+    if (im) art.sprite[n] = im;
   });
   PATHS.props.forEach((n, i) => {
-    art.sprite[n] = props[i]!;
+    const im = props[i];
+    if (im) art.sprite[n] = im;
   });
   art.ready = true;
   return art;

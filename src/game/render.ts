@@ -1,7 +1,18 @@
 import { art } from "./assets";
+import { hullSpriteName } from "./hull-sprite";
 import { traumaOffset } from "./sim";
 import { COLS, ROWS, TILE, WORLD_H, WORLD_W, type Actor } from "./types";
 import type { World } from "./world";
+
+function hullImage(w: World, now: number): HTMLImageElement | undefined {
+  const fi = Math.floor(now / 140) % 4;
+  const name = hullSpriteName(w.state.craftId, w.saucer.sprite, fi);
+  if (name.startsWith("saucer-")) {
+    const i = Number(name.slice(-1)) - 1;
+    return art.saucer[i];
+  }
+  return art.sprite[name];
+}
 
 function img(name: string) {
   return art.sprite[name];
@@ -188,7 +199,8 @@ export function render(ctx: CanvasRenderingContext2D, w: World, now: number) {
 
   // saucer last so it reads on top
   const hover = Math.sin(now * 0.006) * 4;
-  const fi = Math.floor(now / 140) % 4;
+  const hull = hullImage(w, now);
+  const hullRot = w.state.craftId && w.state.craftId !== "disc" ? s.facing : 0;
   ctx.save();
   ctx.globalAlpha = 0.28;
   ctx.fillStyle = "#000";
@@ -197,7 +209,7 @@ export function render(ctx: CanvasRenderingContext2D, w: World, now: number) {
   ctx.fill();
   ctx.restore();
   if (s.flash > 0 && Math.floor(now / 70) % 2 === 0) ctx.globalAlpha = 0.45;
-  drawSprite(ctx, art.saucer[fi], s.x, s.y + hover, 92, 92, 0, 1, s.flash > 0.4);
+  drawSprite(ctx, hull, s.x, s.y + hover, s.w, s.h, hullRot, 1, s.flash > 0.4);
   ctx.globalAlpha = 1;
 
   for (const pop of w.popups) {

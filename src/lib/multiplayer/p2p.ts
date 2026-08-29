@@ -41,12 +41,61 @@ export interface PeerInfo {
   rttMs: number | null;
 }
 
+export type SignalPost =
+  | { op: "leave"; room: string; peer: string }
+  | {
+      op: "signal";
+      room: string;
+      from: string;
+      to: string;
+      kind: SignalKind;
+      payload: unknown;
+    };
+
+/** Swap this on GitHub Pages — `/api/rtc` 404s on the static ship. */
+export interface SignalTransport {
+  poll(query: {
+    room: string;
+    peer: string;
+    name: string;
+    since: number;
+  }): Promise<RtcPollResponse>;
+  post(body: SignalPost): Promise<void>;
+}
+
+export function httpRtcSignal(base = "/api/rtc"): SignalTransport {
+  return {
+    async poll({ room, peer, name, since }) {
+      const params = new URLSearchParams({
+        room,
+        peer,
+        name,
+        since: String(since),
+      });
+      const res = await fetch(`${base}?${params}`);
+      if (!res.ok) throw new Error(`signaling poll failed: ${res.status}`);
+      return (await res.json()) as RtcPollResponse;
+    },
+    async post(body) {
+      const res = await fetch(base, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        keepalive: body.op === "leave",
+      });
+      if (!res.ok) throw new Error(`signal POST failed: ${res.status}`);
+    },
+  };
+}
+
 export interface P2PRoomOptions {
   room: string;
   selfId: string;
   name?: string;
   /** Defaults to VITE_STUN_URLS (comma-separated) or Google public STUN. */
   iceServers?: RTCIceServer[];
+  /** Defaults to `/api/rtc`. Pass a Pages-friendly transport on github.io. */
+  signal?: SignalTransport;
   onPeersChanged?: (peers: PeerInfo[]) => void;
   /** Fires for both the unreliable "state" and reliable "reliable" channels. */
   onMessage?: (from: string, data: unknown, channel: "state" | "reliable") => void;
@@ -97,6 +146,7 @@ export function defaultIceServers(): RTCIceServer[] {
 
 export class P2PRoom {
   private readonly opts: P2PRoomOptions;
+  private readonly signal: SignalTransport;
   private readonly peers = new Map<string, PeerSlot>();
   /** Per-remote-peer signal delivery chains (order-preserving). */
   private readonly signalQueues = new Map<string, Promise<void>>();
@@ -109,6 +159,7 @@ export class P2PRoom {
 
   constructor(opts: P2PRoomOptions) {
     this.opts = opts;
+    this.signal = opts.signal ?? httpRtcSignal();
   }
 
   /**
@@ -138,12 +189,9 @@ export class P2PRoom {
     this.peers.clear();
     // Leaving the roster is the teardown broadcast: everyone's next poll
     // drops this peer and closes their side of the pair.
-    void fetch("/api/rtc", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ op: "leave", room: this.opts.room, peer: this.opts.selfId }),
-      keepalive: true,
-    }).catch(() => {});
+    void this.signal
+      .post({ op: "leave", room: this.opts.room, peer: this.opts.selfId })
+      .catch(() => {});
   }
 
   /** Send on the unreliable game-state channel (drops stale packets). */
@@ -186,16 +234,12 @@ export class P2PRoom {
   }
 
   private async pollOnce(): Promise<void> {
-    const params = new URLSearchParams({
+    const body = await this.signal.poll({
       room: this.opts.room,
       peer: this.opts.selfId,
       name: this.opts.name ?? "",
-      since: String(this.cursor),
+      since: this.cursor,
     });
-    const res = await fetch(`/api/rtc?${params}`);
-    if (this.closed) return;
-    if (!res.ok) throw new Error(`signaling poll failed: ${res.status}`);
-    const body = (await res.json()) as RtcPollResponse;
     if (this.closed) return;
     if (!this.everPolled) {
       this.everPolled = true;
@@ -448,20 +492,15 @@ export class P2PRoom {
     for (let attempt = 0; ; attempt++) {
       if (this.closed) return;
       try {
-        const res = await fetch("/api/rtc", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            op: "signal",
-            room: this.opts.room,
-            from: this.opts.selfId,
-            to,
-            kind,
-            payload,
-          }),
+        await this.signal.post({
+          op: "signal",
+          room: this.opts.room,
+          from: this.opts.selfId,
+          to,
+          kind,
+          payload,
         });
-        if (res.ok) return;
-        throw new Error(`signal POST failed: ${res.status}`);
+        return;
       } catch (err) {
         if (attempt >= SIGNAL_RETRY_DELAYS_MS.length) {
           // Delivery gave up; the pair converges on the next offer cycle (or

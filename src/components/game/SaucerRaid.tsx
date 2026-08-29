@@ -1,5 +1,12 @@
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { SignedIn, SignedOut, UserButton } from "@/lib/auth/gates";
+import { P2PRoom, type PeerInfo } from "@/lib/multiplayer/p2p";
+import {
+  createPagesSignal,
+  makePeerId,
+  makeRoomCode,
+  type PagesSignal,
+} from "@/lib/multiplayer/pages-signal";
 import { audio } from "@/game/audio";
 import { loadArt } from "@/game/assets";
 import { CRAFTS, cycleCraftId, saveCraftId, type Craft, type CraftId } from "@/game/crafts";
@@ -36,9 +43,11 @@ export function SaucerRaid() {
 
   useEffect(() => {
     let dead = false;
-    void loadArt().then(() => {
-      if (!dead) setReady(true);
-    });
+    void loadArt()
+      .catch(() => undefined)
+      .then(() => {
+        if (!dead) setReady(true);
+      });
     return () => {
       dead = true;
     };
@@ -274,6 +283,9 @@ function TitleScreen({
           <LaunchButton ready={ready} level={level} onStart={onStart} />
           {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
         </div>
+        <div className="w-full max-w-xs landscape:absolute landscape:bottom-4 landscape:left-8">
+          <NetBay />
+        </div>
       </div>
     </div>
   );
@@ -456,6 +468,188 @@ function LaunchButton({
     >
       {ready ? `Launch sector ${level}` : "Loading the valley…"}
     </button>
+  );
+}
+
+function NetBay() {
+  const [code, setCode] = useState("");
+  const [status, setStatus] = useState("Enter a room code, or Host to make one.");
+  const [peers, setPeers] = useState<PeerInfo[]>([]);
+  const [tape, setTape] = useState("");
+  const roomRef = useRef<P2PRoom | null>(null);
+  const signalRef = useRef<PagesSignal | null>(null);
+
+  useEffect(() => {
+    return () => {
+      roomRef.current?.close();
+      signalRef.current?.dispose();
+      roomRef.current = null;
+      signalRef.current = null;
+    };
+  }, []);
+
+  const connect = (room: string, name: "Host" | "Join") => {
+    roomRef.current?.close();
+    signalRef.current?.dispose();
+    const signal = createPagesSignal(room);
+    const selfId = makePeerId();
+    const p2p = new P2PRoom({
+      room,
+      selfId,
+      name,
+      signal,
+      onConnected: () => {
+        setStatus(`In room ${room}. Waiting for a wingman…`);
+      },
+      onPeersChanged: (list) => {
+        setPeers(list);
+        const live = list.filter((p) => p.connectionState === "connected");
+        if (live.length) {
+          setStatus(
+            `Linked with ${live.length} wingman${live.length === 1 ? "" : "s"} in ${room}.`,
+          );
+        } else if (list.length) {
+          setStatus(`Found ${list.length} in room ${room}. Linking…`);
+        }
+      },
+    });
+    signalRef.current = signal;
+    roomRef.current = p2p;
+    void p2p.join();
+    setStatus(`Opening room ${room}…`);
+  };
+
+  const host = () => {
+    const room = (code.trim() || makeRoomCode()).toUpperCase();
+    setCode(room);
+    haptics.tap();
+    connect(room, "Host");
+  };
+
+  const join = () => {
+    const room = code.trim().toUpperCase();
+    if (!room) {
+      setStatus("Type the room code first.");
+      return;
+    }
+    haptics.tap();
+    connect(room, "Join");
+  };
+
+  const copyHandshake = async () => {
+    const next = signalRef.current?.exportHandshake() ?? "";
+    setTape(next);
+    try {
+      await navigator.clipboard.writeText(next);
+      setStatus("Handshake copied. Paste it in the other browser.");
+    } catch {
+      setStatus("Copy failed. Select the handshake and copy it yourself.");
+    }
+  };
+
+  const applyHandshake = () => {
+    if (!tape.trim()) {
+      setStatus("Paste a handshake first.");
+      return;
+    }
+    if (!signalRef.current) {
+      setStatus("Host or Join a room, then paste the handshake.");
+      return;
+    }
+    try {
+      signalRef.current.importHandshake(tape);
+      setStatus("Handshake applied. Linking…");
+    } catch {
+      setStatus("That handshake could not be read.");
+    }
+  };
+
+  const linked = peers.filter((p) => p.connectionState === "connected").length;
+
+  return (
+    <div className="mt-4 max-w-xs rounded-xl border border-border bg-surface/80 p-3">
+      <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
+        Wingman
+      </p>
+      <label className="mt-2 block text-xs text-muted">
+        Room code
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          maxLength={8}
+          placeholder="ABC12"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          className="mt-1 h-10 w-full rounded-lg border border-border bg-bg px-3 font-display text-xl tracking-[0.2em] uppercase text-fg"
+        />
+      </label>
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            host();
+          }}
+          className="h-10 flex-1 rounded-[14px] bg-fg text-sm font-medium text-bg"
+        >
+          Host
+        </button>
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            join();
+          }}
+          className="h-10 flex-1 rounded-[14px] border border-border bg-surface-2 text-sm text-fg"
+        >
+          Join
+        </button>
+      </div>
+      <p className="mt-2 text-xs text-muted">{status}</p>
+      {linked > 0 && (
+        <p className="mt-1 text-[10px] uppercase tracking-widest text-accent">
+          {linked} linked
+        </p>
+      )}
+      <details className="mt-2 text-xs text-muted">
+        <summary className="cursor-pointer select-none">
+          Handshake if the relay is quiet
+        </summary>
+        <p className="mt-1 leading-snug">
+          Two tabs on this site link themselves. For another computer, copy this
+          handshake into the other browser after Host and Join.
+        </p>
+        <textarea
+          value={tape}
+          onChange={(e) => setTape(e.target.value)}
+          rows={3}
+          className="mt-2 w-full resize-y rounded-lg border border-border bg-bg p-2 font-mono text-[10px] text-fg"
+        />
+        <div className="mt-1 flex gap-2">
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              void copyHandshake();
+            }}
+            className="h-8 flex-1 rounded-lg border border-border bg-surface-2"
+          >
+            Copy handshake
+          </button>
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              applyHandshake();
+            }}
+            className="h-8 flex-1 rounded-lg border border-border bg-surface-2"
+          >
+            Paste handshake
+          </button>
+        </div>
+      </details>
+    </div>
   );
 }
 
