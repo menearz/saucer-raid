@@ -4,6 +4,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { art } from "./assets";
+import { hullSpriteName } from "./hull-sprite";
 import { traumaOffset } from "./sim";
 import { COLS, ROWS, TILE, WORLD_H, WORLD_W, type Actor } from "./types";
 import type { World } from "./world";
@@ -310,10 +311,7 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
       seen.clear();
       const hover = Math.sin(now * 0.006) * 4;
       const fi = Math.floor(now / 140) % 4;
-      const craftSprite =
-        w.state.craftId && w.state.craftId !== "disc"
-          ? w.saucer.sprite
-          : `saucer-${fi + 1}`;
+      const craftSprite = hullSpriteName(w.state.craftId, w.saucer.sprite, fi);
       const saucerSpr = sprite(-1, craftSprite);
       saucerSpr.position.set(s.x, 18 + hover, s.y);
       saucerSpr.scale.set(s.w, s.h, 1);
