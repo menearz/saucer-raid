@@ -164,7 +164,11 @@ export function runGame(
       acc -= STEP;
     }
 
-    if (lastPhase === "playing" && world.state.phase !== "playing") {
+    if (
+      lastPhase === "playing" &&
+      world.state.phase !== "playing" &&
+      world.state.phase !== "paused"
+    ) {
       input.reset();
     }
     lastPhase = world.state.phase;
