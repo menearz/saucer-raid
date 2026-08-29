@@ -7,6 +7,8 @@ artifacts
 screenshots
 attachments
 assets
+!docs/assets/
+!docs/assets/**
 .grok
 .project_id
 .node_modules.lock

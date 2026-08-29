@@ -4,6 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 export default defineConfig({
+  // spa/ is the HTML/entry root. Tailwind v4 does not follow the module graph;
+  // src/styles.css must @source "." so utilities in src/components/game emit.
   root: path.resolve(import.meta.dirname, "spa"),
   base: "/saucer-raid/",
   publicDir: path.resolve(import.meta.dirname, "public"),

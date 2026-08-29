@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Vite pages root is spa/; @tailwindcss/vite auto-scans that folder only. */
+@source ".";
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Teko:wght@500;600&display=swap");
 
 @custom-variant landscape (@media (orientation: landscape));
