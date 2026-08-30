@@ -84,6 +84,8 @@ export function runGame(
         });
       } else if (a.kind === "loot") {
         marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: "loot" });
+      } else if (a.kind === "rival") {
+        marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: "jeep" });
       } else if (a.kind === "jeep" || a.kind === "tank" || a.kind === "heli" || a.kind === "plane") {
         marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: a.kind });
       }

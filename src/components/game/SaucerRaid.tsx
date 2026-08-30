@@ -699,9 +699,9 @@ function ShoutLayer({
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-15">
-      {shouts.map((s) => (
+      {shouts.map((s, i) => (
         <div
-          key={`${s.id}-${s.text}`}
+          key={`${s.id}-${s.text}-${i}`}
           className="absolute -translate-x-1/2 -translate-y-full rounded-full border border-fg/15 bg-surface/90 px-2.5 py-1 text-[11px] font-medium text-fg shadow-md"
           style={{ left: s.x, top: s.y, opacity: Math.max(0.15, s.life / s.max) }}
         >

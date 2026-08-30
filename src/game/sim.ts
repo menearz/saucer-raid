@@ -19,11 +19,21 @@ import {
   WORLD_H,
   WORLD_W,
   alertFromHeat,
+  canHumanShout,
   type Actor,
   type Kind,
 } from "./types";
 import { createWorld, saveBest, type World } from "./world";
 import { awardSalvage, loadProgress, militaryWant, raidSeconds, saveProgress } from "./progress";
+import {
+  BOSS_HELLO,
+  BOSS_HELLO_WAIT,
+  BOSS_REPLY,
+  BOSS_REPLY_WAIT,
+  BOSS_SALVAGE,
+  BOSS_SCORE_BONUS,
+  BOSS_STING,
+} from "./raid-content";
 
 function clamp(v: number, a: number, b: number) {
   return Math.max(a, Math.min(b, v));
@@ -160,6 +170,7 @@ function stAbduct(w: World, a: Actor) {
     s.vehicles += 1;
   }
   addScore(w, a.score, a.x, a.y);
+  if (a.boss) stingBoss(w, a);
 }
 
 function stDestroy(w: World, a: Actor) {
@@ -187,6 +198,7 @@ function stDestroy(w: World, a: Actor) {
     s.vehicles += 1;
   }
   addScore(w, Math.round(a.score * 0.85), a.x, a.y);
+  if (a.boss) stingBoss(w, a);
 }
 
 function nearestTarget(w: World, s: Actor) {
@@ -416,8 +428,9 @@ function spawnUnit(w: World, kind: "jeep" | "tank" | "heli" | "plane") {
 }
 
 function shoutHuman(w: World, a: Actor) {
-  if (a.shouted) return;
-  a.shouted = true;
+  if (!canHumanShout(a.shouted)) return;
+  const n = typeof a.shouted === "number" ? a.shouted : a.shouted ? 1 : 0;
+  a.shouted = n + 1;
   const line = HUMAN_LINES[Math.floor(Math.random() * HUMAN_LINES.length)]!;
   w.shouts.push({ id: a.id, text: line, x: a.x, y: a.y, life: 1.8, max: 1.8 });
   popup(w, a.x, a.y - 28, line);
@@ -426,6 +439,56 @@ function shoutHuman(w: World, a: Actor) {
   else if (roll < 0.67) audio.cry();
   else audio.plea();
   haptics.tap();
+}
+
+function stingBoss(w: World, a: Actor) {
+  addScore(w, BOSS_SCORE_BONUS, a.x, a.y);
+  popup(w, a.x, a.y - 48, BOSS_STING);
+  w.shouts.push({
+    id: w.saucer.id,
+    text: BOSS_STING,
+    x: w.saucer.x,
+    y: w.saucer.y,
+    life: 2.4,
+    max: 2.4,
+  });
+  const p = loadProgress();
+  p.salvage += BOSS_SALVAGE;
+  saveProgress(p);
+  w.bossTalk = 2;
+}
+
+function stepBossTalk(w: World, dt: number) {
+  const boss = w.actors.find((a) => a.boss && !a.dead);
+  if (!boss) {
+    w.bossTalk = 2;
+    return;
+  }
+  if (w.bossTalk === 0) {
+    if (w.bossTalkT <= 0 && !w.shouts.some((s) => s.text === BOSS_HELLO)) {
+      w.shouts.push({ id: boss.id, text: BOSS_HELLO, x: boss.x, y: boss.y, life: 2.4, max: 2.4 });
+    }
+    w.bossTalkT += dt;
+    if (w.bossTalkT >= BOSS_HELLO_WAIT) {
+      w.shouts.push({
+        id: w.saucer.id,
+        text: BOSS_REPLY,
+        x: w.saucer.x,
+        y: w.saucer.y,
+        life: 2.2,
+        max: 2.2,
+      });
+      popup(w, w.saucer.x, w.saucer.y - 36, BOSS_REPLY);
+      w.bossTalk = 1;
+      w.bossTalkT = 0;
+    }
+  } else if (w.bossTalk === 1) {
+    w.bossTalkT += dt;
+    if (w.bossTalkT >= BOSS_REPLY_WAIT) {
+      w.bossTalk = 2;
+      w.bossTalkT = 0;
+    }
+  }
 }
 
 function hurtPlayer(w: World, dmg = 1) {
@@ -494,6 +557,8 @@ export function step(w: World, input: Actions, dt: number) {
     haptics.gameOver();
     return;
   }
+
+  stepBossTalk(w, dt);
 
   st.comboTimer = Math.max(0, st.comboTimer - dt);
   if (st.comboTimer === 0) st.combo = 0;
@@ -565,7 +630,7 @@ export function step(w: World, input: Actions, dt: number) {
   }
 
   // Military by alert state
-  const count = (k: Kind) => w.actors.filter((a) => a.kind === k && !a.dead).length;
+  const count = (k: Kind) => w.actors.filter((a) => a.kind === k && !a.dead && !a.boss).length;
   const alert = st.alert;
   const want = militaryWant(st.level || 1, alert);
   w.jeepCd -= dt;
@@ -602,7 +667,13 @@ export function step(w: World, input: Actions, dt: number) {
     const dist = Math.hypot(dx, dy);
 
     if (beam && a.abductable && dist < (st.beamR || 82) + a.r * 0.4) {
-      if ((a.kind === "farmer" || a.kind === "civilian") && a.lift <= 0) shoutHuman(w, a);
+      if (
+        (a.kind === "farmer" || a.kind === "civilian") &&
+        canHumanShout(a.shouted) &&
+        (a.lift <= 0 || a.lift > a.abductTime * 0.45)
+      ) {
+        shoutHuman(w, a);
+      }
       beamPull(a, s.x, s.y, dt, st.abductMul || 1);
       spawnParticle(
         w,
@@ -627,7 +698,31 @@ export function step(w: World, input: Actions, dt: number) {
       continue;
     }
 
-    if (a.kind === "jeep" || a.kind === "tank") {
+    if (a.kind === "rival") {
+      const cloaked = (st.cloakT ?? 0) > 0;
+      const fighting = w.bossTalk >= 2;
+      const jx = s.x - a.x;
+      const jy = s.y - a.y;
+      const jl = Math.hypot(jx, jy) || 1;
+      if (!fighting || cloaked) {
+        a.wanderA += dt * 0.7;
+        const ox = Math.cos(a.wanderA) * 40;
+        const oy = Math.sin(a.wanderA) * 40;
+        a.vx += (ox - a.vx) * (1 - Math.exp(-3 * dt));
+        a.vy += (oy - a.vy) * (1 - Math.exp(-3 * dt));
+        a.facing = Math.atan2(s.y - a.y, s.x - a.x);
+      } else {
+        const spd = 155;
+        a.vx += ((jx / jl) * spd - a.vx) * (1 - Math.exp(-4 * dt));
+        a.vy += ((jy / jl) * spd - a.vy) * (1 - Math.exp(-4 * dt));
+        a.facing = Math.atan2(jy, jx);
+        if (a.fireCd <= 0 && jl < 620) {
+          a.fireCd = 1.15;
+          spawnShot(w, a.x, a.y, jx, jy, 260, 1, 1.8);
+          audio.laser();
+        }
+      }
+    } else if (a.kind === "jeep" || a.kind === "tank") {
       const cloaked = (st.cloakT ?? 0) > 0;
       const jx = s.x - a.x;
       const jy = s.y - a.y;
