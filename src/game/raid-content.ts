@@ -20,9 +20,18 @@ export function isBossSector(level: number): boolean {
   return level >= 3 && level % 3 === 0;
 }
 
-export function bossKindForLevel(level: number): "tank" | "heli" | "plane" {
-  const i = Math.floor(Math.max(1, level) / 3 - 1) % 3;
-  return (["tank", "heli", "plane"] as const)[i]!;
+const RIVAL_HULLS = [
+  { sprite: "craft-spike", w: 100, h: 96, r: 30 },
+  { sprite: "craft-ember", w: 146, h: 74, r: 38 },
+  { sprite: "craft-yoke", w: 108, h: 82, r: 38 },
+  { sprite: "craft-keel", w: 130, h: 68, r: 30 },
+  { sprite: "craft-wake", w: 118, h: 98, r: 36 },
+  { sprite: "saucer-1", w: 86, h: 86, r: 34 },
+] as const;
+
+export function rivalHullForLevel(level: number) {
+  const i = Math.floor(Math.max(1, level) / 3 - 1) % RIVAL_HULLS.length;
+  return RIVAL_HULLS[i]!;
 }
 
 export function mulberry(seed: number) {
@@ -410,42 +419,34 @@ export function bossHome(level: number): { x: number; y: number } {
   return { x: start.x + 420, y: start.y - 70 };
 }
 
-const UNIT = {
-  tank: { r: 34, w: 86, h: 48, hp: 160, score: 900, heat: 4, abduct: true, t: 1.8, sprite: "tank" },
-  heli: { r: 30, w: 72, h: 64, hp: 90, score: 760, heat: 3, abduct: false, t: 0, sprite: "heli" },
-  plane: { r: 28, w: 88, h: 56, hp: 80, score: 820, heat: 3, abduct: false, t: 0, sprite: "plane" },
-} as const;
-
 export function makeBossActor(level: number, x: number, y: number, id: number): Actor {
-  const kind = bossKindForLevel(level);
-  const spec = UNIT[kind];
-  const r = Math.round(spec.r * 1.45);
-  const hp = Math.round(spec.hp * 2.8);
+  const hull = rivalHullForLevel(level);
+  const hp = 340;
   return {
     id,
-    kind,
+    kind: "rival",
     x,
     y,
     vx: 0,
     vy: 0,
-    r,
-    w: Math.round(spec.w * 1.45),
-    h: Math.round(spec.h * 1.45),
+    r: Math.round(hull.r * 1.35),
+    w: Math.round(hull.w * 1.35),
+    h: Math.round(hull.h * 1.35),
     hp,
     maxHp: hp,
     facing: 0,
     lift: 0,
-    abductTime: spec.t,
-    abductable: spec.abduct,
+    abductTime: 0,
+    abductable: false,
     destructible: true,
     solid: false,
-    score: spec.score,
-    heat: spec.heat,
-    sprite: spec.sprite,
+    score: 1400,
+    heat: 6,
+    sprite: hull.sprite,
     flash: 0,
     dead: false,
     flee: 0,
-    wanderT: kind === "plane" ? 10 : 0,
+    wanderT: 0,
     wanderA: 0,
     fireCd: 1.2,
     z: y,

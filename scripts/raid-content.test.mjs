@@ -74,24 +74,40 @@ test("boss cadence is every 3 sectors starting at 3", () => {
   assert.equal(isBossSector(9), true);
 });
 
-test("boss uses existing tank, heli, or plane sprites", () => {
+const OWN_HULLS = /^(craft-(spike|yoke|ember|keel|wake)|saucer-1)$/;
+
+test("rival boss uses an existing original hull sprite, not military or a knockoff", () => {
   assert.equal(BOSS_HELLO, "Hey buddy, what are you doing here?");
   assert.equal(BOSS_REPLY, "I'm not your buddy, pal.");
   assert.equal(BOSS_STING, "Respect my authority!");
-  const tank = makeBossActor(3, 100, 200, 7);
-  const heli = makeBossActor(6, 100, 200, 8);
-  const plane = makeBossActor(9, 100, 200, 9);
-  assert.equal(tank.kind, "tank");
-  assert.equal(tank.sprite, "tank");
-  assert.equal(heli.kind, "heli");
-  assert.equal(heli.sprite, "heli");
-  assert.equal(plane.kind, "plane");
-  assert.equal(plane.sprite, "plane");
-  assert.equal(tank.boss, true);
-  assert.ok(tank.hp > 200, "boss tank needs more HP than a regular tank");
-  assert.ok(tank.r > 34, "boss should read bigger");
+  const a = makeBossActor(3, 100, 200, 7);
+  const b = makeBossActor(6, 100, 200, 8);
+  const c = makeBossActor(9, 100, 200, 9);
+  for (const boss of [a, b, c]) {
+    assert.equal(boss.kind, "rival");
+    assert.equal(boss.boss, true);
+    assert.match(boss.sprite, OWN_HULLS);
+    assert.ok(!["tank", "heli", "plane", "jeep"].includes(boss.kind));
+    assert.ok(boss.hp > 180);
+    assert.ok(boss.r > 30);
+  }
   assert.ok(BOSS_SCORE_BONUS >= 1200);
   assert.ok(BOSS_SALVAGE >= 6);
+});
+
+test("hangar keeps the six original hull names", () => {
+  const crafts = readFileSync(join(ROOT, "src/game/crafts.ts"), "utf8");
+  for (const name of [
+    "Classic Disc",
+    "Yoke Runner",
+    "Chrome Spike",
+    "Long Ember",
+    "Pale Keel",
+    "Twin Wake",
+  ]) {
+    assert.match(crafts, new RegExp(`name:\\s*"${name}"`));
+  }
+  assert.doesNotMatch(crafts, /Falcon|Destroyer|Enterprise|Normandy|Viper|Millennium/i);
 });
 
 test("world seeds maps and the sim plays the exact boss beat", () => {
@@ -102,8 +118,7 @@ test("world seeds maps and the sim plays the exact boss beat", () => {
   assert.match(SIM, /BOSS_REPLY/);
   assert.match(SIM, /BOSS_STING/);
   assert.match(SIM, /BOSS_SCORE_BONUS|BOSS_SALVAGE/);
-  assert.match(LOOP, /"tank"|"heli"|"plane"/);
-  assert.doesNotMatch(LOOP, /t:\s*"boss"/);
+  assert.match(SIM, /kind === "rival"/);
 });
 
 test("same sector seed is stable; consecutive sectors use different styles", () => {

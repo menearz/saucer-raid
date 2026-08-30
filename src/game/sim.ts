@@ -698,14 +698,37 @@ export function step(w: World, input: Actions, dt: number) {
       continue;
     }
 
-    if (a.kind === "jeep" || a.kind === "tank") {
+    if (a.kind === "rival") {
       const cloaked = (st.cloakT ?? 0) > 0;
-      const talking = !!(a.boss && w.bossTalk < 2);
+      const fighting = w.bossTalk >= 2;
+      const jx = s.x - a.x;
+      const jy = s.y - a.y;
+      const jl = Math.hypot(jx, jy) || 1;
+      if (!fighting || cloaked) {
+        a.wanderA += dt * 0.7;
+        const ox = Math.cos(a.wanderA) * 40;
+        const oy = Math.sin(a.wanderA) * 40;
+        a.vx += (ox - a.vx) * (1 - Math.exp(-3 * dt));
+        a.vy += (oy - a.vy) * (1 - Math.exp(-3 * dt));
+        a.facing = Math.atan2(s.y - a.y, s.x - a.x);
+      } else {
+        const spd = 155;
+        a.vx += ((jx / jl) * spd - a.vx) * (1 - Math.exp(-4 * dt));
+        a.vy += ((jy / jl) * spd - a.vy) * (1 - Math.exp(-4 * dt));
+        a.facing = Math.atan2(jy, jx);
+        if (a.fireCd <= 0 && jl < 620) {
+          a.fireCd = 1.15;
+          spawnShot(w, a.x, a.y, jx, jy, 260, 1, 1.8);
+          audio.laser();
+        }
+      }
+    } else if (a.kind === "jeep" || a.kind === "tank") {
+      const cloaked = (st.cloakT ?? 0) > 0;
       const jx = s.x - a.x;
       const jy = s.y - a.y;
       const jl = Math.hypot(jx, jy) || 1;
       const spd = a.kind === "tank" ? 78 : 145;
-      if (talking || cloaked) {
+      if (cloaked) {
         a.wanderT -= dt;
         if (a.wanderT <= 0) {
           a.wanderT = 1.4;
@@ -719,7 +742,7 @@ export function step(w: World, input: Actions, dt: number) {
         a.vy += ((jy / jl) * spd - a.vy) * (1 - Math.exp(-5 * dt));
         a.facing = Math.atan2(a.vy, a.vx);
         const range = a.kind === "tank" ? 580 : 520;
-        if (a.fireCd <= 0 && jl < range && !(a.boss && w.bossTalk < 2)) {
+        if (a.fireCd <= 0 && jl < range) {
           a.fireCd = a.kind === "tank" ? 1.85 : 1.15;
           spawnShot(w, a.x, a.y, jx, jy, a.kind === "tank" ? 210 : 280, a.kind === "tank" ? 2 : 1);
           if (a.kind === "tank") audio.tank();
@@ -734,7 +757,7 @@ export function step(w: World, input: Actions, dt: number) {
       a.vy += ((oy / ol) * 190 - a.vy) * (1 - Math.exp(-4 * dt));
       a.facing = Math.atan2(s.y - a.y, s.x - a.x);
       const jl = Math.hypot(s.x - a.x, s.y - a.y);
-      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && jl < 480 && !(a.boss && w.bossTalk < 2)) {
+      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && jl < 480) {
         a.fireCd = 0.72;
         spawnShot(w, a.x, a.y, s.x - a.x, s.y - a.y, 300, 1, 1.6);
         audio.heli();
@@ -745,7 +768,7 @@ export function step(w: World, input: Actions, dt: number) {
       a.vy = Math.sin(hd) * 340;
       a.facing = hd;
       a.wanderT -= dt;
-      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && !(a.boss && w.bossTalk < 2)) {
+      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0) {
         a.fireCd = 0.38;
         spawnShot(w, a.x, a.y, Math.cos(hd), Math.sin(hd), 420, 1, 1.1);
         audio.jet();
@@ -757,14 +780,7 @@ export function step(w: World, input: Actions, dt: number) {
         a.x > WORLD_W + 80 ||
         a.y > WORLD_H + 80
       ) {
-        if (a.boss) {
-          a.wanderT = 8;
-          a.wanderA = Math.atan2(s.y - a.y, s.x - a.x);
-          a.x = clamp(a.x, 40, WORLD_W - 40);
-          a.y = clamp(a.y, 40, WORLD_H - 40);
-        } else {
-          a.dead = true;
-        }
+        a.dead = true;
       }
     } else if (a.kind === "rubble") {
       a.spin = (a.spin ?? 0) * Math.exp(-1.8 * dt);

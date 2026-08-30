@@ -4,6 +4,7 @@ export type Alert = "calm" | "uneasy" | "alert" | "hostile" | "air-raid";
 
 export type Kind =
   | "saucer"
+  | "rival"
   | "cow"
   | "pig"
   | "sheep"
@@ -179,6 +180,7 @@ export const POINTS: Record<string, number> = {
   tank: 900,
   heli: 760,
   plane: 820,
+  rival: 1400,
   barn: 900,
   farmhouse: 780,
   townhouse: 680,
@@ -201,6 +203,7 @@ export const HEAT_GAIN: Record<string, number> = {
   tank: 4,
   heli: 3,
   plane: 3,
+  rival: 6,
   barn: 12,
   farmhouse: 11,
   townhouse: 10,

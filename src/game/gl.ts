@@ -353,6 +353,7 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
           a.kind === "tank" ||
           a.kind === "heli" ||
           a.kind === "plane" ||
+          a.kind === "rival" ||
           a.spin
             ? -a.facing
             : 0;
