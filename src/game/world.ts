@@ -1,11 +1,7 @@
 import {
-  COLS,
   HEAT_GAIN,
-  MAX_HP,
   POINTS,
   RAID_TIME,
-  ROWS,
-  TILE,
   WORLD_H,
   WORLD_W,
   type Actor,
@@ -15,10 +11,23 @@ import {
   type Particle,
   type Popup,
   type Shout,
-  type Terrain,
 } from "./types";
 import { getCraft } from "./crafts";
 import { loadProgress } from "./progress";
+import {
+  BOSS_HELLO,
+  bossHome,
+  buildTerrain,
+  isBossSector,
+  makeBossActor,
+  mulberry,
+  sectorBuildings,
+  sectorFauna,
+  sectorPropPlan,
+  sectorSeed,
+  sectorStart,
+  sectorVehicles,
+} from "./raid-content";
 
 export type World = {
   terrain: Uint8Array;
@@ -41,21 +50,12 @@ export type World = {
   planeCd: number;
   time: number;
   qaYaw: number;
+  bossTalk: number;
 };
 
 let nid = 1;
 function id() {
   return nid++;
-}
-
-function mulberry(seed: number) {
-  let s = seed >>> 0;
-  return () => {
-    s += 0x6d2b79f5;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 export function emptyStats() {
@@ -109,60 +109,16 @@ function actor(
   };
 }
 
-function paintRect(
-  t: Uint8Array,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  v: Terrain,
-) {
-  const xa = Math.max(0, x0);
-  const ya = Math.max(0, y0);
-  const xb = Math.min(COLS, x1);
-  const yb = Math.min(ROWS, y1);
-  for (let y = ya; y < yb; y++) {
-    for (let x = xa; x < xb; x++) t[y * COLS + x] = v;
-  }
-}
-
-function paintRoadH(t: Uint8Array, y: number, x0: number, x1: number, v: Terrain) {
-  paintRect(t, x0, y, x1, y + 2, v);
-}
-
-function paintRoadV(t: Uint8Array, x: number, y0: number, y1: number, v: Terrain) {
-  paintRect(t, x, y0, x + 2, y1, v);
-}
-
 export function createWorld(): World {
   nid = 1;
-  const rand = mulberry(0x51ace11);
-  const terrain = new Uint8Array(COLS * ROWS);
-  terrain.fill(0);
-
-  // Wheat pastures on the farm side
-  for (let i = 0; i < 10; i++) {
-    const x = 2 + Math.floor(rand() * 28);
-    const y = 2 + Math.floor(rand() * 44);
-    paintRect(terrain, x, y, x + 6 + Math.floor(rand() * 5), y + 5 + Math.floor(rand() * 4), 1);
-  }
-
-  // Farm dirt roads
-  paintRoadH(terrain, 12, 0, 42, 2);
-  paintRoadH(terrain, 28, 0, 50, 2);
-  paintRoadH(terrain, 40, 4, 42, 2);
-  paintRoadV(terrain, 8, 0, ROWS, 2);
-  paintRoadV(terrain, 22, 6, 46, 2);
-  paintRoadV(terrain, 36, 0, ROWS, 2);
-
-  // Town streets
-  paintRect(terrain, 44, 0, COLS, ROWS, 0);
-  for (let y = 4; y < ROWS; y += 8) paintRoadH(terrain, y, 44, COLS, 3);
-  for (let x = 46; x < COLS; x += 7) paintRoadV(terrain, x, 0, ROWS, 3);
-  // highway linking farm to town
-  paintRoadH(terrain, 28, 36, 50, 3);
+  const prog = loadProgress();
+  const level = Math.max(1, prog.level || 1);
+  const rand = mulberry(sectorSeed(level) ^ 0xa11ce);
+  const terrain = buildTerrain(level);
 
   const actors: Actor[] = [];
+  const popups: Popup[] = [];
+  const shouts: Shout[] = [];
 
   const place = (
     kind: Kind,
@@ -196,10 +152,10 @@ export function createWorld(): World {
     }
   };
 
-  livestock("cow", "cow", 11, 180, 200, 2300, 3200, 28, 0.7);
-  livestock("pig", "pig", 8, 200, 400, 2100, 3000, 22, 0.55);
-  livestock("sheep", "sheep", 8, 240, 180, 2200, 3100, 22, 0.55);
-  livestock("chicken", "chicken", 14, 160, 220, 2400, 3300, 16, 0.35);
+  const fauna = sectorFauna(level);
+  for (const s of fauna.stock) {
+    livestock(s.kind, s.sprite, s.n, s.x0, s.y0, s.x1, s.y1, s.r, s.t);
+  }
 
   const folk = (
     kind: Kind,
@@ -219,35 +175,9 @@ export function createWorld(): World {
       });
     }
   };
-  folk("farmer", ["farmer-m", "farmer-f"], 8, 200, 2500);
-  folk("civilian", ["civilian-m", "civilian-f"], 12, 3200, WORLD_W - 160);
+  for (const f of fauna.folk) folk(f.kind, f.sprites, f.n, f.x0, f.x1);
 
-  const buildings: Array<[Kind, string, number, number, number, number, number]> = [
-    ["barn", "barn", 520, 620, 96, 86, 140],
-    ["barn", "barn", 1480, 980, 96, 86, 140],
-    ["barn", "barn", 780, 2100, 96, 86, 140],
-    ["barn", "barn", 1880, 2680, 96, 86, 140],
-    ["farmhouse", "farmhouse", 980, 480, 78, 74, 110],
-    ["farmhouse", "farmhouse", 420, 1680, 78, 74, 110],
-    ["farmhouse", "farmhouse", 1640, 1540, 78, 74, 110],
-    ["farmhouse", "farmhouse", 1180, 2920, 78, 74, 110],
-    ["silo", "silo", 680, 540, 36, 92, 80],
-    ["silo", "silo", 1600, 880, 36, 92, 80],
-    ["silo", "silo", 920, 2240, 36, 92, 80],
-    ["townhouse", "townhouse", 3560, 420, 70, 70, 95],
-    ["townhouse", "townhouse", 3980, 420, 70, 70, 95],
-    ["townhouse", "townhouse", 3560, 980, 70, 70, 95],
-    ["townhouse", "townhouse", 4120, 980, 70, 70, 95],
-    ["townhouse", "townhouse", 3680, 1560, 70, 70, 95],
-    ["townhouse", "townhouse", 4100, 1560, 70, 70, 95],
-    ["townhouse", "townhouse", 3520, 2140, 70, 70, 95],
-    ["townhouse", "townhouse", 4000, 2140, 70, 70, 95],
-    ["townhouse", "townhouse", 3720, 2720, 70, 70, 95],
-    ["townhouse", "townhouse", 4160, 2720, 70, 70, 95],
-    ["shop", "shop", 3840, 720, 78, 64, 120],
-    ["shop", "shop", 3920, 1880, 78, 64, 120],
-    ["shop", "shop", 3600, 2440, 78, 64, 120],
-  ];
+  const buildings = sectorBuildings(level);
 
   for (const [kind, sprite, x, y, w, h, hp] of buildings) {
     place(kind, x, y, sprite, {
@@ -299,23 +229,7 @@ export function createWorld(): World {
     });
   }
 
-  const vehicles: Array<[Kind, string, number, number]> = [
-    ["tractor", "tractor", 600, 760],
-    ["tractor", "tractor", 1540, 1120],
-    ["tractor", "tractor", 860, 2220],
-    ["tractor", "tractor", 1960, 2800],
-    ["pickup", "pickup", 1100, 560],
-    ["pickup", "pickup", 500, 1780],
-    ["pickup", "pickup", 3480, 1100],
-    ["pickup", "pickup", 4060, 1680],
-    ["sedan", "sedan", 3620, 560],
-    ["sedan", "sedan", 4040, 560],
-    ["sedan", "sedan", 3700, 1140],
-    ["sedan", "sedan", 4180, 1720],
-    ["sedan", "sedan", 3580, 2280],
-    ["sedan", "sedan", 4080, 2860],
-    ["sedan", "sedan", 2300, 2060],
-  ];
+  const vehicles = sectorVehicles(level);
   for (const [kind, sprite, x, y] of vehicles) {
     place(kind, x, y, sprite, {
       w: 62,
@@ -329,17 +243,20 @@ export function createWorld(): World {
     });
   }
 
+  const plan = sectorPropPlan(level);
   const props: Array<[string, number, number, number, number]> = [];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < plan.trees; i++) {
     const tree = rand() > 0.45 ? "tree" : "pine";
     props.push([tree, 80 + rand() * 3000, 80 + rand() * 3300, 44, 56]);
   }
-  for (let i = 0; i < 16; i++) props.push(["hay", 160 + rand() * 2200, 200 + rand() * 3000, 34, 30]);
-  for (let i = 0; i < 18; i++) props.push(["bush", 100 + rand() * 4300, 100 + rand() * 3300, 28, 24]);
-  for (let i = 0; i < 10; i++) props.push(["crate", 3400 + rand() * 1200, 200 + rand() * 3000, 24, 24]);
-  for (let i = 0; i < 8; i++) props.push(["barrel", 3400 + rand() * 1200, 200 + rand() * 3000, 22, 28]);
-  for (let i = 0; i < 10; i++) props.push(["mailbox", 3480 + rand() * 1100, 240 + rand() * 3000, 18, 28]);
-  for (let i = 0; i < 8; i++) props.push(["pole", 3500 + rand() * 1100, 200 + rand() * 3000, 16, 70]);
+  for (let i = 0; i < plan.hay; i++) props.push(["hay", 160 + rand() * 2200, 200 + rand() * 3000, 34, 30]);
+  for (let i = 0; i < plan.bush; i++) props.push(["bush", 100 + rand() * 4300, 100 + rand() * 3300, 28, 24]);
+  for (let i = 0; i < plan.crate; i++) props.push(["crate", plan.townX0 + rand() * 1200, 200 + rand() * 3000, 24, 24]);
+  for (let i = 0; i < plan.barrel; i++) props.push(["barrel", plan.townX0 + rand() * 1200, 200 + rand() * 3000, 22, 28]);
+  for (let i = 0; i < plan.mailbox; i++) {
+    props.push(["mailbox", plan.townX0 + rand() * 1100, 240 + rand() * 3000, 18, 28]);
+  }
+  for (let i = 0; i < plan.pole; i++) props.push(["pole", plan.townX0 + rand() * 1100, 200 + rand() * 3000, 16, 70]);
   for (const [key, x, y, w, h] of props) {
     place("prop", x, y, key, {
       propKey: key,
@@ -357,14 +274,14 @@ export function createWorld(): World {
   }
 
   const craft = getCraft();
-  const prog = loadProgress();
   const u = prog.upgrades;
   const hp = craft.hp + u.armor;
   const speed = craft.speed * (1 + u.engines * 0.12);
   const beam = craft.beam * (1 + u.tractor * 0.08);
   const shieldMax = u.shields;
-  const sx = 1100;
-  const sy = 1500;
+  const start = sectorStart(level);
+  const sx = start.x;
+  const sy = start.y;
   const saucer = actor("saucer", sx, sy, {
     sprite: craft.sprite,
     r: craft.r,
@@ -373,6 +290,16 @@ export function createWorld(): World {
     hp,
     maxHp: hp,
   });
+
+  let bossTalk = 2;
+  if (isBossSector(level)) {
+    const home = bossHome(level);
+    const rival = makeBossActor(level, home.x, home.y, id());
+    actors.push(rival);
+    shouts.push({ id: rival.id, text: BOSS_HELLO, x: rival.x, y: rival.y, life: 2.4, max: 2.4 });
+    popups.push({ x: rival.x, y: rival.y - 36, text: BOSS_HELLO, life: 2.2, max: 2.2 });
+    bossTalk = 0;
+  }
 
   const particles: Particle[] = [];
   for (let i = 0; i < 400; i++) {
@@ -396,8 +323,8 @@ export function createWorld(): World {
     lasers: [],
     bullets: [],
     particles,
-    popups: [],
-    shouts: [],
+    popups,
+    shouts,
     explosions: [],
     saucer,
     state: {
@@ -415,7 +342,7 @@ export function createWorld(): World {
       camY: sy,
       camZoom: 1,
       nextId: nid,
-      seed: 1,
+      seed: sectorSeed(level),
       stats: emptyStats(),
       reason: "",
       alert: "calm",
@@ -442,6 +369,7 @@ export function createWorld(): World {
     planeCd: 3,
     time: 0,
     qaYaw: 0,
+    bossTalk,
   };
 }
 

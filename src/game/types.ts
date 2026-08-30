@@ -4,6 +4,7 @@ export type Alert = "calm" | "uneasy" | "alert" | "hostile" | "air-raid";
 
 export type Kind =
   | "saucer"
+  | "rival"
   | "cow"
   | "pig"
   | "sheep"
@@ -68,8 +69,9 @@ export type Actor = {
   knockX?: number;
   knockY?: number;
   dmg?: number;
-  shouted?: boolean;
+  shouted?: number;
   loot?: "weapon" | "cloak";
+  boss?: boolean;
 };
 
 export type Particle = {
@@ -178,6 +180,7 @@ export const POINTS: Record<string, number> = {
   tank: 900,
   heli: 760,
   plane: 820,
+  rival: 1400,
   barn: 900,
   farmhouse: 780,
   townhouse: 680,
@@ -200,6 +203,7 @@ export const HEAT_GAIN: Record<string, number> = {
   tank: 4,
   heli: 3,
   plane: 3,
+  rival: 6,
   barn: 12,
   farmhouse: 11,
   townhouse: 10,
@@ -222,7 +226,15 @@ export function alertFromHeat(heat: number): Alert {
   return id;
 }
 
+export const HUMAN_SHOUT_MAX = 2;
+
+export function canHumanShout(shouted?: number | boolean): boolean {
+  const n = typeof shouted === "number" ? shouted : shouted ? 1 : 0;
+  return n < HUMAN_SHOUT_MAX;
+}
+
 export const HUMAN_LINES = [
+  "AHH NOT AGAIN",
   "Don't probe me!",
   "AAAAHHH!",
   "Help!",
@@ -233,4 +245,42 @@ export const HUMAN_LINES = [
   "Get off!",
   "Why me?!",
   "I'm not cattle!",
+  "Put me down!",
+  "Ma saw this coming!",
+  "The cows were right!",
+  "I just baked!",
+  "Take the mayor!",
+  "Not my good hat!",
+  "I paid taxes!",
+  "Gram said stay in!",
+  "Beam's ticklish!",
+  "I got chores!",
+  "Leave the pie!",
+  "This is trespassin'!",
+  "Call the sheriff!",
+  "I ain't dinner!",
+  "Don't drop me!",
+  "I got a dentist!",
+  "Town's gonna riot!",
+  "Save the hens first!",
+  "I'm too bony!",
+  "Take Earl instead!",
+  "I just got home!",
+  "Not after harvest!",
+  "I drop easily!",
+  "This dress is new!",
+  "Tell Doris I love her!",
+  "I never liked town!",
+  "Is this about the well?",
+  "I saw you Tuesday!",
+  "Keep the tractor!",
+  "I'm late for church!",
+  "The dog warned us!",
+  "Put me by the barn!",
+  "I don't even like milk!",
+  "This is so rude!",
+  "My truck's still runnin'!",
+  "That's my lunch!",
+  "We voted no aliens!",
+  "I just mopped!",
 ];

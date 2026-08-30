@@ -127,5 +127,5 @@ export function militaryWant(level: number, alert: Alert) {
 export type MapMark = {
   x: number;
   y: number;
-  t: "you" | "gun" | "cloak" | "loot" | "jeep" | "tank" | "heli" | "plane";
+  t: "you" | "gun" | "cloak" | "loot" | "jeep" | "tank" | "heli" | "plane" | "boss";
 };

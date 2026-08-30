@@ -27,6 +27,7 @@ export type HudSlice = {
   shield: number;
   shieldMax: number;
   marks: MapMark[];
+  bossAlive: boolean;
 };
 
 const empty: HudSlice = {
@@ -52,6 +53,7 @@ const empty: HudSlice = {
   shield: 0,
   shieldMax: 0,
   marks: [],
+  bossAlive: false,
 };
 
 export const useHud = create<HudSlice>(() => ({
