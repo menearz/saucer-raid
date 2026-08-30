@@ -406,12 +406,8 @@ export function sectorStart(level: number): { x: number; y: number } {
 }
 
 export function bossHome(level: number): { x: number; y: number } {
-  const style = mapStyle(level);
-  if (style === 1) return { x: 3100, y: 900 };
-  if (style === 2) return { x: 3600, y: 1800 };
-  if (style === 3) return { x: 3700, y: 860 };
-  if (style === 4) return { x: 3000, y: 1840 };
-  return { x: 4000, y: 900 };
+  const start = sectorStart(level);
+  return { x: start.x + 420, y: start.y - 70 };
 }
 
 export function makeBossActor(level: number, x: number, y: number, id: number): Actor {
