@@ -7,7 +7,6 @@ export const BOSS_REPLY = "I'm not your buddy, pal.";
 export const BOSS_STING = "Respect my authority!";
 export const BOSS_HELLO_WAIT = 1.85;
 export const BOSS_REPLY_WAIT = 1.55;
-export const RIVAL_SPRITE = "craft-spike";
 
 export function sectorSeed(level: number): number {
   return (0x51ace11 ^ Math.imul(Math.max(1, level), 0x9e3779b9)) >>> 0;
@@ -21,8 +20,9 @@ export function isBossSector(level: number): boolean {
   return level >= 3 && level % 3 === 0;
 }
 
-export function rivalHullForLevel(_level: number): string {
-  return RIVAL_SPRITE;
+export function bossKindForLevel(level: number): "tank" | "heli" | "plane" {
+  const i = Math.floor(Math.max(1, level) / 3 - 1) % 3;
+  return (["tank", "heli", "plane"] as const)[i]!;
 }
 
 export function mulberry(seed: number) {
@@ -410,34 +410,42 @@ export function bossHome(level: number): { x: number; y: number } {
   return { x: start.x + 420, y: start.y - 70 };
 }
 
+const UNIT = {
+  tank: { r: 34, w: 86, h: 48, hp: 160, score: 900, heat: 4, abduct: true, t: 1.8, sprite: "tank" },
+  heli: { r: 30, w: 72, h: 64, hp: 90, score: 760, heat: 3, abduct: false, t: 0, sprite: "heli" },
+  plane: { r: 28, w: 88, h: 56, hp: 80, score: 820, heat: 3, abduct: false, t: 0, sprite: "plane" },
+} as const;
+
 export function makeBossActor(level: number, x: number, y: number, id: number): Actor {
-  const sprite = rivalHullForLevel(level);
-  const hp = 340;
+  const kind = bossKindForLevel(level);
+  const spec = UNIT[kind];
+  const r = Math.round(spec.r * 1.45);
+  const hp = Math.round(spec.hp * 2.8);
   return {
     id,
-    kind: "rival",
+    kind,
     x,
     y,
     vx: 0,
     vy: 0,
-    r: 48,
-    w: 145,
-    h: 139,
+    r,
+    w: Math.round(spec.w * 1.45),
+    h: Math.round(spec.h * 1.45),
     hp,
     maxHp: hp,
     facing: 0,
     lift: 0,
-    abductTime: 0,
-    abductable: false,
+    abductTime: spec.t,
+    abductable: spec.abduct,
     destructible: true,
     solid: false,
-    score: 1400,
-    heat: 6,
-    sprite,
+    score: spec.score,
+    heat: spec.heat,
+    sprite: spec.sprite,
     flash: 0,
     dead: false,
     flee: 0,
-    wanderT: 0,
+    wanderT: kind === "plane" ? 10 : 0,
     wanderA: 0,
     fireCd: 1.2,
     z: y,

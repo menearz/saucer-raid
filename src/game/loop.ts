@@ -84,8 +84,6 @@ export function runGame(
         });
       } else if (a.kind === "loot") {
         marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: "loot" });
-      } else if (a.boss || a.kind === "rival") {
-        marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: "boss" });
       } else if (a.kind === "jeep" || a.kind === "tank" || a.kind === "heli" || a.kind === "plane") {
         marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: a.kind });
       }
@@ -119,7 +117,6 @@ export function runGame(
       shield: st.shield ?? 0,
       shieldMax: st.shieldMax ?? 0,
       marks,
-      bossAlive: world.actors.some((a) => a.boss && !a.dead),
     });
   };
 

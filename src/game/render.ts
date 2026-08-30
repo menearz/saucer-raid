@@ -143,8 +143,7 @@ export function render(ctx: CanvasRenderingContext2D, w: World, now: number) {
     const spriteName =
       a.kind === "rubble" ? a.sprite : a.propKey ? a.propKey : a.sprite;
     const im = img(spriteName);
-    const rot =
-      a.kind === "jeep" || a.kind === "laser" || a.kind === "rival" ? a.facing : 0;
+    const rot = a.kind === "jeep" || a.kind === "laser" ? a.facing : 0;
     drawSprite(ctx, im, a.x, a.y - lift + bob, a.w, a.h, rot, alpha, flash);
 
     if (a.destructible && a.hp < a.maxHp && a.kind !== "prop") {

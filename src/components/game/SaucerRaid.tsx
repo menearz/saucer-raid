@@ -730,7 +730,6 @@ function HudOverlay({
     level: number;
     shield: number;
     shieldMax: number;
-    bossAlive?: boolean;
   };
 }) {
   const m = Math.floor(hud.timeLeft / 60);
@@ -750,11 +749,6 @@ function HudOverlay({
           <p className="text-[10px] uppercase tracking-widest text-muted">
             Sector {hud.level}
           </p>
-          {hud.bossAlive && (
-            <p className="text-xs font-medium uppercase tracking-widest text-danger">
-              Rival disc
-            </p>
-          )}
           {hud.combo > 1 && (
             <p className="text-xs font-medium uppercase tracking-widest text-accent">
               Combo {hud.combo}
@@ -832,13 +826,11 @@ function MiniMap({ marks }: { marks: MapMark[] }) {
                     ? "size-1.5 bg-fg"
                     : m.t === "loot"
                       ? "size-1.5 bg-accent"
-                      : m.t === "boss"
-                        ? "size-2.5 bg-danger"
-                        : m.t === "tank"
-                          ? "size-1.5 bg-danger"
-                          : m.t === "heli" || m.t === "plane"
-                            ? "size-1 bg-danger"
-                            : "size-1 bg-danger/80"
+                      : m.t === "tank"
+                        ? "size-1.5 bg-danger"
+                        : m.t === "heli" || m.t === "plane"
+                          ? "size-1 bg-danger"
+                          : "size-1 bg-danger/80"
             }`}
             style={{ left: `${m.x * 100}%`, top: `${m.y * 100}%` }}
           />
@@ -848,7 +840,6 @@ function MiniMap({ marks }: { marks: MapMark[] }) {
         <span className="text-warn">Gun</span>
         <span className="text-fg">Cloak</span>
         <span className="text-danger">Army</span>
-        <span className="text-danger">Rival</span>
       </div>
     </div>
   );

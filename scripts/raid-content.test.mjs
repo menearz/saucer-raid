@@ -38,6 +38,7 @@ function mixDelta(a, b) {
 test("HUMAN_LINES includes the exact sentinel line and a big short pool", () => {
   const uniq = new Set(HUMAN_LINES);
   assert.ok(HUMAN_LINES.includes("AHH NOT AGAIN"), "pool must include exact AHH NOT AGAIN");
+  assert.ok(HUMAN_LINES.includes("not again!"), "pool must include exact not again!");
   assert.ok(HUMAN_LINES.length >= 36, `expected 36+ lines, got ${HUMAN_LINES.length}`);
   assert.equal(uniq.size, HUMAN_LINES.length, "lines must be unique");
   for (const line of HUMAN_LINES) {
@@ -73,22 +74,27 @@ test("boss cadence is every 3 sectors starting at 3", () => {
   assert.equal(isBossSector(9), true);
 });
 
-test("boss is a rival hull, not a tank or heli or plane", () => {
+test("boss uses existing tank, heli, or plane sprites", () => {
   assert.equal(BOSS_HELLO, "Hey buddy, what are you doing here?");
   assert.equal(BOSS_REPLY, "I'm not your buddy, pal.");
   assert.equal(BOSS_STING, "Respect my authority!");
-  const rival = makeBossActor(3, 100, 200, 7);
-  assert.equal(rival.kind, "rival");
-  assert.equal(rival.boss, true);
-  assert.match(rival.sprite, /^craft-(spike|yoke|ember|keel|wake)$|^saucer-1$/);
-  assert.ok(!["tank", "heli", "plane", "jeep"].includes(rival.kind));
-  assert.ok(rival.hp > 180, "rival needs more HP than a jeep");
-  assert.ok(rival.r > 34, "rival should read bigger");
+  const tank = makeBossActor(3, 100, 200, 7);
+  const heli = makeBossActor(6, 100, 200, 8);
+  const plane = makeBossActor(9, 100, 200, 9);
+  assert.equal(tank.kind, "tank");
+  assert.equal(tank.sprite, "tank");
+  assert.equal(heli.kind, "heli");
+  assert.equal(heli.sprite, "heli");
+  assert.equal(plane.kind, "plane");
+  assert.equal(plane.sprite, "plane");
+  assert.equal(tank.boss, true);
+  assert.ok(tank.hp > 200, "boss tank needs more HP than a regular tank");
+  assert.ok(tank.r > 34, "boss should read bigger");
   assert.ok(BOSS_SCORE_BONUS >= 1200);
   assert.ok(BOSS_SALVAGE >= 6);
 });
 
-test("world seeds maps and the sim plays the exact rival beat", () => {
+test("world seeds maps and the sim plays the exact boss beat", () => {
   assert.match(WORLD, /sectorSeed|buildTerrain/);
   assert.match(WORLD, /isBossSector/);
   assert.match(WORLD, /makeBossActor|boss:\s*true/);
@@ -96,7 +102,8 @@ test("world seeds maps and the sim plays the exact rival beat", () => {
   assert.match(SIM, /BOSS_REPLY/);
   assert.match(SIM, /BOSS_STING/);
   assert.match(SIM, /BOSS_SCORE_BONUS|BOSS_SALVAGE/);
-  assert.match(LOOP, /boss|rival/);
+  assert.match(LOOP, /"tank"|"heli"|"plane"/);
+  assert.doesNotMatch(LOOP, /t:\s*"boss"/);
 });
 
 test("same sector seed is stable; consecutive sectors use different styles", () => {

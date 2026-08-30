@@ -51,6 +51,7 @@ export type World = {
   time: number;
   qaYaw: number;
   bossTalk: number;
+  bossTalkT: number;
 };
 
 let nid = 1;
@@ -294,12 +295,13 @@ export function createWorld(): World {
   let bossTalk = 2;
   if (isBossSector(level)) {
     const home = bossHome(level);
-    const rival = makeBossActor(level, home.x, home.y, id());
-    actors.push(rival);
-    shouts.push({ id: rival.id, text: BOSS_HELLO, x: rival.x, y: rival.y, life: 2.4, max: 2.4 });
-    popups.push({ x: rival.x, y: rival.y - 36, text: BOSS_HELLO, life: 2.2, max: 2.2 });
+    const boss = makeBossActor(level, home.x, home.y, id());
+    actors.push(boss);
+    shouts.push({ id: boss.id, text: BOSS_HELLO, x: boss.x, y: boss.y, life: 2.4, max: 2.4 });
+    popups.push({ x: boss.x, y: boss.y - 36, text: BOSS_HELLO, life: 2.2, max: 2.2 });
     bossTalk = 0;
   }
+  const bossTalkT = 0;
 
   const particles: Particle[] = [];
   for (let i = 0; i < 400; i++) {
@@ -370,6 +372,7 @@ export function createWorld(): World {
     time: 0,
     qaYaw: 0,
     bossTalk,
+    bossTalkT,
   };
 }
 

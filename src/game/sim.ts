@@ -459,17 +459,17 @@ function stingBoss(w: World, a: Actor) {
 }
 
 function stepBossTalk(w: World, dt: number) {
-  const rival = w.actors.find((a) => a.boss && !a.dead);
-  if (!rival) {
+  const boss = w.actors.find((a) => a.boss && !a.dead);
+  if (!boss) {
     w.bossTalk = 2;
     return;
   }
   if (w.bossTalk === 0) {
-    if (rival.wanderT <= 0 && !w.shouts.some((s) => s.text === BOSS_HELLO)) {
-      w.shouts.push({ id: rival.id, text: BOSS_HELLO, x: rival.x, y: rival.y, life: 2.4, max: 2.4 });
+    if (w.bossTalkT <= 0 && !w.shouts.some((s) => s.text === BOSS_HELLO)) {
+      w.shouts.push({ id: boss.id, text: BOSS_HELLO, x: boss.x, y: boss.y, life: 2.4, max: 2.4 });
     }
-    rival.wanderT += dt;
-    if (rival.wanderT >= BOSS_HELLO_WAIT) {
+    w.bossTalkT += dt;
+    if (w.bossTalkT >= BOSS_HELLO_WAIT) {
       w.shouts.push({
         id: w.saucer.id,
         text: BOSS_REPLY,
@@ -480,13 +480,13 @@ function stepBossTalk(w: World, dt: number) {
       });
       popup(w, w.saucer.x, w.saucer.y - 36, BOSS_REPLY);
       w.bossTalk = 1;
-      rival.wanderT = 0;
+      w.bossTalkT = 0;
     }
   } else if (w.bossTalk === 1) {
-    rival.wanderT += dt;
-    if (rival.wanderT >= BOSS_REPLY_WAIT) {
+    w.bossTalkT += dt;
+    if (w.bossTalkT >= BOSS_REPLY_WAIT) {
       w.bossTalk = 2;
-      rival.wanderT = 0;
+      w.bossTalkT = 0;
     }
   }
 }
@@ -630,7 +630,7 @@ export function step(w: World, input: Actions, dt: number) {
   }
 
   // Military by alert state
-  const count = (k: Kind) => w.actors.filter((a) => a.kind === k && !a.dead).length;
+  const count = (k: Kind) => w.actors.filter((a) => a.kind === k && !a.dead && !a.boss).length;
   const alert = st.alert;
   const want = militaryWant(st.level || 1, alert);
   w.jeepCd -= dt;
@@ -698,37 +698,14 @@ export function step(w: World, input: Actions, dt: number) {
       continue;
     }
 
-    if (a.kind === "rival") {
+    if (a.kind === "jeep" || a.kind === "tank") {
       const cloaked = (st.cloakT ?? 0) > 0;
-      const fighting = w.bossTalk >= 2;
-      const jx = s.x - a.x;
-      const jy = s.y - a.y;
-      const jl = Math.hypot(jx, jy) || 1;
-      if (!fighting || cloaked) {
-        a.wanderA += dt * 0.7;
-        const ox = Math.cos(a.wanderA) * 40;
-        const oy = Math.sin(a.wanderA) * 40;
-        a.vx += (ox - a.vx) * (1 - Math.exp(-3 * dt));
-        a.vy += (oy - a.vy) * (1 - Math.exp(-3 * dt));
-        a.facing = Math.atan2(s.y - a.y, s.x - a.x);
-      } else {
-        const spd = 155;
-        a.vx += ((jx / jl) * spd - a.vx) * (1 - Math.exp(-4 * dt));
-        a.vy += ((jy / jl) * spd - a.vy) * (1 - Math.exp(-4 * dt));
-        a.facing = Math.atan2(jy, jx);
-        if (a.fireCd <= 0 && jl < 620) {
-          a.fireCd = 1.15;
-          spawnShot(w, a.x, a.y, jx, jy, 260, 1, 1.8);
-          audio.laser();
-        }
-      }
-    } else if (a.kind === "jeep" || a.kind === "tank") {
-      const cloaked = (st.cloakT ?? 0) > 0;
+      const talking = !!(a.boss && w.bossTalk < 2);
       const jx = s.x - a.x;
       const jy = s.y - a.y;
       const jl = Math.hypot(jx, jy) || 1;
       const spd = a.kind === "tank" ? 78 : 145;
-      if (cloaked) {
+      if (talking || cloaked) {
         a.wanderT -= dt;
         if (a.wanderT <= 0) {
           a.wanderT = 1.4;
@@ -742,7 +719,7 @@ export function step(w: World, input: Actions, dt: number) {
         a.vy += ((jy / jl) * spd - a.vy) * (1 - Math.exp(-5 * dt));
         a.facing = Math.atan2(a.vy, a.vx);
         const range = a.kind === "tank" ? 580 : 520;
-        if (a.fireCd <= 0 && jl < range) {
+        if (a.fireCd <= 0 && jl < range && !(a.boss && w.bossTalk < 2)) {
           a.fireCd = a.kind === "tank" ? 1.85 : 1.15;
           spawnShot(w, a.x, a.y, jx, jy, a.kind === "tank" ? 210 : 280, a.kind === "tank" ? 2 : 1);
           if (a.kind === "tank") audio.tank();
@@ -757,7 +734,7 @@ export function step(w: World, input: Actions, dt: number) {
       a.vy += ((oy / ol) * 190 - a.vy) * (1 - Math.exp(-4 * dt));
       a.facing = Math.atan2(s.y - a.y, s.x - a.x);
       const jl = Math.hypot(s.x - a.x, s.y - a.y);
-      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && jl < 480) {
+      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && jl < 480 && !(a.boss && w.bossTalk < 2)) {
         a.fireCd = 0.72;
         spawnShot(w, a.x, a.y, s.x - a.x, s.y - a.y, 300, 1, 1.6);
         audio.heli();
@@ -768,7 +745,7 @@ export function step(w: World, input: Actions, dt: number) {
       a.vy = Math.sin(hd) * 340;
       a.facing = hd;
       a.wanderT -= dt;
-      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0) {
+      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && !(a.boss && w.bossTalk < 2)) {
         a.fireCd = 0.38;
         spawnShot(w, a.x, a.y, Math.cos(hd), Math.sin(hd), 420, 1, 1.1);
         audio.jet();
@@ -780,7 +757,14 @@ export function step(w: World, input: Actions, dt: number) {
         a.x > WORLD_W + 80 ||
         a.y > WORLD_H + 80
       ) {
-        a.dead = true;
+        if (a.boss) {
+          a.wanderT = 8;
+          a.wanderA = Math.atan2(s.y - a.y, s.x - a.x);
+          a.x = clamp(a.x, 40, WORLD_W - 40);
+          a.y = clamp(a.y, 40, WORLD_H - 40);
+        } else {
+          a.dead = true;
+        }
       }
     } else if (a.kind === "rubble") {
       a.spin = (a.spin ?? 0) * Math.exp(-1.8 * dt);
