@@ -147,8 +147,11 @@ export function render(ctx: CanvasRenderingContext2D, w: World, now: number) {
       a.kind === "jeep" || a.kind === "laser" || a.kind === "rival" ? a.facing : 0;
     drawSprite(ctx, im, a.x, a.y - lift + bob, a.w, a.h, rot, alpha, flash);
 
-    if (a.destructible && a.hp < a.maxHp && a.kind !== "prop") {
-      const pct = a.hp / a.maxHp;
+    const shown = a.hp + (a.shield ?? 0);
+    const shownMax = a.maxHp + (a.shieldMax ?? 0);
+    const hurt = shown < shownMax || a.boss;
+    if (a.destructible && a.kind !== "prop" && shownMax > 0 && hurt) {
+      const pct = shown / shownMax;
       ctx.fillStyle = "rgba(0,0,0,0.45)";
       ctx.fillRect(a.x - 16, a.y - a.h * 0.55, 32, 4);
       ctx.fillStyle = pct > 0.4 ? "#6fdb9a" : "#d46a4c";

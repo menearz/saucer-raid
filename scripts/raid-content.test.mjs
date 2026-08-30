@@ -3,19 +3,37 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
-import { HUMAN_LINES, HUMAN_SHOUT_MAX, canHumanShout, COLS, ROWS } from "../src/game/types.ts";
 import {
+  AHH_FIRST_SHOUT_CHANCE,
+  AHH_NOT_AGAIN,
+  HUMAN_LINES,
+  HUMAN_SHOUT_MAX,
+  canHumanShout,
+  COLS,
+  pickHumanLine,
+  ROWS,
+} from "../src/game/types.ts";
+import {
+  BOSS_COMBAT,
+  BOSS_FIGHT,
+  BOSS_FIGHT_WAIT,
   BOSS_HELLO,
+  BOSS_HELLO_WAIT,
   BOSS_REPLY,
+  BOSS_REPLY_WAIT,
   BOSS_SALVAGE,
   BOSS_SCORE_BONUS,
   BOSS_STING,
+  bossHpForLevel,
+  bossShieldForLevel,
   buildTerrain,
   isBossSector,
   makeBossActor,
   mapStyle,
+  rivalHullForLevel,
   sectorBuildings,
   sectorSeed,
+  soakHit,
 } from "../src/game/raid-content.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -37,13 +55,38 @@ function mixDelta(a, b) {
 
 test("HUMAN_LINES includes the exact sentinel line and a big short pool", () => {
   const uniq = new Set(HUMAN_LINES);
-  assert.ok(HUMAN_LINES.includes("AHH NOT AGAIN"), "pool must include exact AHH NOT AGAIN");
+  assert.equal(AHH_NOT_AGAIN, "AHH NOT AGAIN");
+  assert.ok(HUMAN_LINES.includes(AHH_NOT_AGAIN), "pool must include exact AHH NOT AGAIN");
   assert.ok(HUMAN_LINES.includes("not again!"), "pool must include exact not again!");
   assert.ok(HUMAN_LINES.length >= 36, `expected 36+ lines, got ${HUMAN_LINES.length}`);
   assert.equal(uniq.size, HUMAN_LINES.length, "lines must be unique");
   for (const line of HUMAN_LINES) {
     assert.ok(line.length > 0 && line.length <= 28, `"${line}" is too long for the shout UI`);
   }
+});
+
+test("first person shout is usually AHH NOT AGAIN; later shouts stay mixed", () => {
+  assert.ok(AHH_FIRST_SHOUT_CHANCE >= 0.65);
+  assert.equal(pickHumanLine(0, () => 0), AHH_NOT_AGAIN);
+  assert.equal(pickHumanLine(0, () => 0.71), AHH_NOT_AGAIN);
+  let firstAhh = 0;
+  let laterAhh = 0;
+  const N = 4000;
+  for (let i = 0; i < N; i++) {
+    if (pickHumanLine(0) === AHH_NOT_AGAIN) firstAhh++;
+    if (pickHumanLine(1) === AHH_NOT_AGAIN) laterAhh++;
+  }
+  assert.ok(firstAhh / N > 0.65, `first shout AHH rate ${firstAhh / N} should be high`);
+  assert.ok(laterAhh / N < 0.2, `later shouts must not force AHH (${laterAhh / N})`);
+});
+
+test("AHH NOT AGAIN stays on people; cows never shout", () => {
+  assert.match(SIM, /pickHumanLine/);
+  assert.match(SIM, /kind === "farmer" \|\| a\.kind === "civilian"/);
+  assert.doesNotMatch(
+    SIM,
+    /kind === "cow"[\s\S]{0,180}shoutHuman|shoutHuman[\s\S]{0,80}kind === "cow"/,
+  );
 });
 
 test("abduct shouts can fire more than once per person", () => {
@@ -79,10 +122,11 @@ const OWN_HULLS = /^(craft-(spike|yoke|ember|keel|wake)|saucer-1)$/;
 test("rival boss uses an existing original hull sprite, not military or a knockoff", () => {
   assert.equal(BOSS_HELLO, "Hey buddy, what are you doing here?");
   assert.equal(BOSS_REPLY, "I'm not your buddy, pal.");
+  assert.equal(BOSS_FIGHT, "(fight)");
   assert.equal(BOSS_STING, "Respect my authority!");
-  const a = makeBossActor(3, 100, 200, 7);
-  const b = makeBossActor(6, 100, 200, 8);
-  const c = makeBossActor(9, 100, 200, 9);
+  const a = makeBossActor(3, 100, 200, 7, "saucer-1");
+  const b = makeBossActor(6, 100, 200, 8, "saucer-1");
+  const c = makeBossActor(9, 100, 200, 9, "saucer-1");
   for (const boss of [a, b, c]) {
     assert.equal(boss.kind, "rival");
     assert.equal(boss.boss, true);
@@ -93,6 +137,68 @@ test("rival boss uses an existing original hull sprite, not military or a knocko
   }
   assert.ok(BOSS_SCORE_BONUS >= 1200);
   assert.ok(BOSS_SALVAGE >= 6);
+});
+
+const PLAYER_SPRITES = [
+  "saucer-1",
+  "craft-yoke",
+  "craft-spike",
+  "craft-ember",
+  "craft-keel",
+  "craft-wake",
+];
+
+test("rival never uses the player's selected hull, including Classic Disc", () => {
+  assert.match(WORLD, /makeBossActor\([\s\S]*craft\.sprite/);
+  for (const spr of PLAYER_SPRITES) {
+    for (const level of [3, 6, 9, 12, 15, 18]) {
+      const hull = rivalHullForLevel(level, spr);
+      assert.notEqual(hull.sprite, spr, `level ${level} rival must not be ${spr}`);
+      assert.match(hull.sprite, OWN_HULLS);
+      const boss = makeBossActor(level, 0, 0, 1, spr);
+      assert.notEqual(boss.sprite, spr);
+    }
+  }
+  const vsDisc = makeBossActor(3, 0, 0, 1, "saucer-1");
+  assert.ok(
+    ["craft-yoke", "craft-spike", "craft-ember", "craft-keel", "craft-wake"].includes(vsDisc.sprite),
+    `Classic Disc rival must be one of the other five hulls, got ${vsDisc.sprite}`,
+  );
+});
+
+test("boss is a real fight: more HP, shields, later sectors harder", () => {
+  assert.ok(bossHpForLevel(3) >= 2000);
+  assert.ok(bossHpForLevel(6) > bossHpForLevel(3));
+  assert.ok(bossHpForLevel(9) > bossHpForLevel(6));
+  assert.ok(bossShieldForLevel(3) >= 300);
+  assert.ok(bossShieldForLevel(6) > bossShieldForLevel(3));
+  const first = makeBossActor(3, 0, 0, 1, "saucer-1");
+  const later = makeBossActor(9, 0, 0, 1, "saucer-1");
+  assert.equal(first.hp, bossHpForLevel(3));
+  assert.equal(first.shield, bossShieldForLevel(3));
+  const firstEhp = first.hp + (first.shield ?? 0);
+  const laterEhp = later.hp + (later.shield ?? 0);
+  assert.ok(laterEhp > firstEhp * 1.4, "sector 9 must be a longer fight than sector 3");
+  const dummy = { hp: 100, shield: 50 };
+  assert.equal(soakHit(dummy, 30), 100);
+  assert.equal(dummy.shield, 20);
+  assert.equal(soakHit(dummy, 40), 80);
+  assert.equal(dummy.shield, 0);
+});
+
+test("hello scene plays the three lines, then combat; boss is invuln during talk", () => {
+  assert.ok(BOSS_HELLO_WAIT >= 2);
+  assert.ok(BOSS_REPLY_WAIT >= 2);
+  assert.ok(BOSS_FIGHT_WAIT >= 0.8);
+  assert.equal(BOSS_COMBAT, 3);
+  assert.match(SIM, /BOSS_HELLO/);
+  assert.match(SIM, /BOSS_REPLY/);
+  assert.match(SIM, /BOSS_FIGHT/);
+  assert.match(SIM, /BOSS_STING/);
+  assert.match(SIM, /bossTalk < BOSS_COMBAT/);
+  assert.match(SIM, /bossTalk >= BOSS_COMBAT/);
+  assert.match(WORLD, /bossTalk = 0/);
+  assert.match(WORLD, /BOSS_COMBAT/);
 });
 
 test("hangar keeps the six original hull names", () => {

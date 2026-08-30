@@ -4,9 +4,13 @@ export const BOSS_SCORE_BONUS = 1800;
 export const BOSS_SALVAGE = 8;
 export const BOSS_HELLO = "Hey buddy, what are you doing here?";
 export const BOSS_REPLY = "I'm not your buddy, pal.";
+export const BOSS_FIGHT = "(fight)";
 export const BOSS_STING = "Respect my authority!";
-export const BOSS_HELLO_WAIT = 1.85;
-export const BOSS_REPLY_WAIT = 1.55;
+export const BOSS_HELLO_WAIT = 2.4;
+export const BOSS_REPLY_WAIT = 2.2;
+export const BOSS_FIGHT_WAIT = 1.15;
+/** Talk states 0–2 play the hello scene; combat starts at this value. */
+export const BOSS_COMBAT = 3;
 
 export function sectorSeed(level: number): number {
   return (0x51ace11 ^ Math.imul(Math.max(1, level), 0x9e3779b9)) >>> 0;
@@ -29,9 +33,36 @@ const RIVAL_HULLS = [
   { sprite: "saucer-1", w: 86, h: 86, r: 34 },
 ] as const;
 
-export function rivalHullForLevel(level: number) {
-  const i = Math.floor(Math.max(1, level) / 3 - 1) % RIVAL_HULLS.length;
-  return RIVAL_HULLS[i]!;
+export function rivalHullForLevel(level: number, playerSprite?: string) {
+  const avoid = playerSprite || "";
+  const pool = RIVAL_HULLS.filter((h) => h.sprite !== avoid);
+  const use = pool.length ? pool : RIVAL_HULLS.filter((h) => h.sprite !== "saucer-1");
+  const wave = Math.max(0, Math.floor(Math.max(1, level) / 3) - 1);
+  return use[wave % use.length]!;
+}
+
+export function bossWave(level: number): number {
+  return Math.max(1, Math.floor(Math.max(1, level) / 3));
+}
+
+export function bossHpForLevel(level: number): number {
+  return 2200 + 1100 * (bossWave(level) - 1);
+}
+
+export function bossShieldForLevel(level: number): number {
+  return 400 + 220 * (bossWave(level) - 1);
+}
+
+/** Shield soaks first, then hull. Returns remaining hull HP. */
+export function soakHit(a: Actor, dmg: number): number {
+  let left = dmg;
+  if ((a.shield ?? 0) > 0) {
+    const eat = Math.min(a.shield!, left);
+    a.shield = a.shield! - eat;
+    left -= eat;
+  }
+  if (left > 0) a.hp -= left;
+  return a.hp;
 }
 
 export function mulberry(seed: number) {
@@ -419,9 +450,16 @@ export function bossHome(level: number): { x: number; y: number } {
   return { x: start.x + 420, y: start.y - 70 };
 }
 
-export function makeBossActor(level: number, x: number, y: number, id: number): Actor {
-  const hull = rivalHullForLevel(level);
-  const hp = 340;
+export function makeBossActor(
+  level: number,
+  x: number,
+  y: number,
+  id: number,
+  playerSprite?: string,
+): Actor {
+  const hull = rivalHullForLevel(level, playerSprite);
+  const hp = bossHpForLevel(level);
+  const shield = bossShieldForLevel(level);
   return {
     id,
     kind: "rival",
@@ -448,9 +486,11 @@ export function makeBossActor(level: number, x: number, y: number, id: number): 
     flee: 0,
     wanderT: 0,
     wanderA: 0,
-    fireCd: 1.2,
+    fireCd: 1.55,
     z: y,
     boss: true,
+    shield,
+    shieldMax: shield,
   };
 }
 

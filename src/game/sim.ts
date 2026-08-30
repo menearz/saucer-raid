@@ -12,8 +12,8 @@ import {
 } from "./physics";
 import {
   COLS,
-  HUMAN_LINES,
   LASER_SPEED,
+  pickHumanLine,
   ROWS,
   TILE,
   WORLD_H,
@@ -26,6 +26,9 @@ import {
 import { createWorld, saveBest, type World } from "./world";
 import { awardSalvage, loadProgress, militaryWant, raidSeconds, saveProgress } from "./progress";
 import {
+  BOSS_COMBAT,
+  BOSS_FIGHT,
+  BOSS_FIGHT_WAIT,
   BOSS_HELLO,
   BOSS_HELLO_WAIT,
   BOSS_REPLY,
@@ -33,6 +36,7 @@ import {
   BOSS_SALVAGE,
   BOSS_SCORE_BONUS,
   BOSS_STING,
+  soakHit,
 } from "./raid-content";
 
 function clamp(v: number, a: number, b: number) {
@@ -431,7 +435,7 @@ function shoutHuman(w: World, a: Actor) {
   if (!canHumanShout(a.shouted)) return;
   const n = typeof a.shouted === "number" ? a.shouted : a.shouted ? 1 : 0;
   a.shouted = n + 1;
-  const line = HUMAN_LINES[Math.floor(Math.random() * HUMAN_LINES.length)]!;
+  const line = pickHumanLine(n);
   w.shouts.push({ id: a.id, text: line, x: a.x, y: a.y, life: 1.8, max: 1.8 });
   popup(w, a.x, a.y - 28, line);
   const roll = Math.random();
@@ -455,18 +459,18 @@ function stingBoss(w: World, a: Actor) {
   const p = loadProgress();
   p.salvage += BOSS_SALVAGE;
   saveProgress(p);
-  w.bossTalk = 2;
+  w.bossTalk = BOSS_COMBAT;
 }
 
 function stepBossTalk(w: World, dt: number) {
   const boss = w.actors.find((a) => a.boss && !a.dead);
   if (!boss) {
-    w.bossTalk = 2;
+    w.bossTalk = BOSS_COMBAT;
     return;
   }
   if (w.bossTalk === 0) {
     if (w.bossTalkT <= 0 && !w.shouts.some((s) => s.text === BOSS_HELLO)) {
-      w.shouts.push({ id: boss.id, text: BOSS_HELLO, x: boss.x, y: boss.y, life: 2.4, max: 2.4 });
+      w.shouts.push({ id: boss.id, text: BOSS_HELLO, x: boss.x, y: boss.y, life: 2.6, max: 2.6 });
     }
     w.bossTalkT += dt;
     if (w.bossTalkT >= BOSS_HELLO_WAIT) {
@@ -475,8 +479,8 @@ function stepBossTalk(w: World, dt: number) {
         text: BOSS_REPLY,
         x: w.saucer.x,
         y: w.saucer.y,
-        life: 2.2,
-        max: 2.2,
+        life: 2.4,
+        max: 2.4,
       });
       popup(w, w.saucer.x, w.saucer.y - 36, BOSS_REPLY);
       w.bossTalk = 1;
@@ -485,7 +489,22 @@ function stepBossTalk(w: World, dt: number) {
   } else if (w.bossTalk === 1) {
     w.bossTalkT += dt;
     if (w.bossTalkT >= BOSS_REPLY_WAIT) {
+      w.shouts.push({
+        id: boss.id,
+        text: BOSS_FIGHT,
+        x: boss.x,
+        y: boss.y,
+        life: 2.0,
+        max: 2.0,
+      });
+      popup(w, boss.x, boss.y - 36, BOSS_FIGHT);
       w.bossTalk = 2;
+      w.bossTalkT = 0;
+    }
+  } else if (w.bossTalk === 2) {
+    w.bossTalkT += dt;
+    if (w.bossTalkT >= BOSS_FIGHT_WAIT) {
+      w.bossTalk = BOSS_COMBAT;
       w.bossTalkT = 0;
     }
   }
@@ -700,7 +719,7 @@ export function step(w: World, input: Actions, dt: number) {
 
     if (a.kind === "rival") {
       const cloaked = (st.cloakT ?? 0) > 0;
-      const fighting = w.bossTalk >= 2;
+      const fighting = w.bossTalk >= BOSS_COMBAT;
       const jx = s.x - a.x;
       const jy = s.y - a.y;
       const jl = Math.hypot(jx, jy) || 1;
@@ -717,7 +736,7 @@ export function step(w: World, input: Actions, dt: number) {
         a.vy += ((jy / jl) * spd - a.vy) * (1 - Math.exp(-4 * dt));
         a.facing = Math.atan2(jy, jx);
         if (a.fireCd <= 0 && jl < 620) {
-          a.fireCd = 1.15;
+          a.fireCd = 1.55;
           spawnShot(w, a.x, a.y, jx, jy, 260, 1, 1.8);
           audio.laser();
         }
@@ -831,9 +850,11 @@ export function step(w: World, input: Actions, dt: number) {
     }
     for (const a of w.actors) {
       if (a.dead || !a.destructible) continue;
+      if (a.boss && w.bossTalk < BOSS_COMBAT) continue;
       if (!sweptHit(x0, y0, L.x, L.y, a.x, a.y, a.r + 12)) continue;
       L.dead = true;
-      a.hp -= 22 * (st.laserMult || 1) * (1 + (st.weaponTier ?? 0) * 0.28);
+      const dmg = 22 * (st.laserMult || 1) * (1 + (st.weaponTier ?? 0) * 0.28);
+      soakHit(a, dmg);
       a.flash = 0.08;
       applyImpulse(a, L.vx * 0.08, L.vy * 0.08);
       audio.hit();

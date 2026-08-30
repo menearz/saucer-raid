@@ -72,6 +72,8 @@ export type Actor = {
   shouted?: number;
   loot?: "weapon" | "cloak";
   boss?: boolean;
+  shield?: number;
+  shieldMax?: number;
 };
 
 export type Particle = {
@@ -227,6 +229,9 @@ export function alertFromHeat(heat: number): Alert {
 }
 
 export const HUMAN_SHOUT_MAX = 2;
+export const AHH_NOT_AGAIN = "AHH NOT AGAIN";
+/** First person/farmer shout is usually this exact line. Never used for cattle. */
+export const AHH_FIRST_SHOUT_CHANCE = 0.72;
 
 export function canHumanShout(shouted?: number | boolean): boolean {
   const n = typeof shouted === "number" ? shouted : shouted ? 1 : 0;
@@ -234,7 +239,7 @@ export function canHumanShout(shouted?: number | boolean): boolean {
 }
 
 export const HUMAN_LINES = [
-  "AHH NOT AGAIN",
+  AHH_NOT_AGAIN,
   "not again!",
   "Don't probe me!",
   "AAAAHHH!",
@@ -285,3 +290,9 @@ export const HUMAN_LINES = [
   "We voted no aliens!",
   "I just mopped!",
 ];
+
+/** People/farmers only. `shoutIndex` 0 is the first grab — usually AHH NOT AGAIN. */
+export function pickHumanLine(shoutIndex: number, rng: () => number = Math.random): string {
+  if (shoutIndex <= 0 && rng() < AHH_FIRST_SHOUT_CHANCE) return AHH_NOT_AGAIN;
+  return HUMAN_LINES[(rng() * HUMAN_LINES.length) | 0]!;
+}
