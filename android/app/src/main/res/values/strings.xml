@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Saucer Raid</string>
+    <string name="title_activity_main">Saucer Raid</string>
+    <string name="package_name">com.menearz.saucerraid</string>
+    <string name="custom_url_scheme">com.menearz.saucerraid</string>
+</resources>
