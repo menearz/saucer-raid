@@ -23,19 +23,22 @@ Game sim, physics, and art are not changed. Leftover better-auth / pglite / logi
 
 ## Icon slot (Spectre)
 
-Drop the real **square** icon here later:
+The live store icon is already in place:
 
 ```
-resources/icon.png
+store/icon-1024.png      # Spectre original (~1.2MB)
+resources/icon.png       # exact copy of that file (Android/iOS source)
 ```
 
-`resources/icon.png` is a placeholder (1024×1024, night-sky saucer). Do not run `scripts/write-placeholder-icon.py` after Spectre drops the real file — that script redraws the placeholder. After Spectre replaces it, on a machine with the native toolchains:
+Do **not** run `scripts/write-placeholder-icon.py` — that script redraws the old 7KB placeholder and would overwrite Spectre’s art.
+
+To restamp native launchers after replacing the icon:
 
 ```bash
 npx @capacitor/assets generate --iconBackgroundColor '#090b0e' --iconBackgroundColorDark '#090b0e' --assetPath resources
 ```
 
-That stamps Android mipmaps and the iOS App Icon set. A Mac is **not** required to land this wrap — only to make an IPA later.
+A Mac is **not** required to land this wrap — only to make an IPA later.
 
 ## Build the wrap (any machine with Node)
 
@@ -95,4 +98,4 @@ The `ios/` folder is already in git so this PR does not need a Mac. You **cannot
 - No store upload from CI or from this repo
 - No change to the live Pages game unless someone runs `build:pages` and commits `docs/`
 
-When the accounts exist, Chief opens Android Studio / Xcode as above and uploads. Spectre drops the square icon in `resources/icon.png` first if the placeholder is still there.
+When the accounts exist, Chief opens Android Studio / Xcode as above and uploads. Listing shots live in `store/` (`screenshot-hangar.png`, `screenshot-raid.png`, `screenshot-portrait.png`, `screenshot-boss.png`). Do not upload from this repo.
