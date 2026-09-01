@@ -41,3 +41,19 @@ test("native wrap projects exist with the store package id", () => {
   assert.ok(existsSync(join(ROOT, "resources/icon.png")), "icon slot missing");
   assert.ok(existsSync(join(ROOT, "WRAP.md")), "WRAP.md missing");
 });
+
+test("resources/icon.png is Spectre's store icon, not the 7KB placeholder", () => {
+  const icon = readFileSync(join(ROOT, "resources/icon.png"));
+  const store = readFileSync(join(ROOT, "store/icon-1024.png"));
+  assert.equal(icon.byteLength, store.byteLength);
+  assert.ok(icon.byteLength > 1_000_000, `icon too small: ${icon.byteLength}`);
+  assert.deepEqual(icon, store);
+  for (const name of [
+    "screenshot-hangar.png",
+    "screenshot-raid.png",
+    "screenshot-portrait.png",
+    "screenshot-boss.png",
+  ]) {
+    assert.ok(existsSync(join(ROOT, "store", name)), `missing store/${name}`);
+  }
+});
