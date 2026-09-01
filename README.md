@@ -39,3 +39,9 @@ npm install
 npm run dev
 # or: grok
 ```
+
+## Website vs store wrap
+
+The live game stays on GitHub Pages (`npm run build:pages` → `docs/` with base `/saucer-raid/`).
+
+A separate Capacitor wrap (`npm run build:wrap`, base `/`) is how the same game can later become a Play Store AAB and an iOS app. That wrap is not uploaded yet — it waits on Google ($25) and Apple ($99) developer accounts. See [WRAP.md](WRAP.md).

@@ -6,7 +6,7 @@ dist
 artifacts
 screenshots
 attachments
-assets
+/assets
 !docs/assets/
 !docs/assets/**
 .grok
@@ -18,3 +18,14 @@ assets
 !.env.example
 *.jpg
 *.jpeg
+
+# Capacitor copies the wrap bundle here on `npm run cap:sync`.
+android/app/src/main/assets/public
+ios/App/App/public
+android/app/build
+android/.gradle
+android/local.properties
+android/captures
+ios/App/Pods
+ios/App/build
+ios/DerivedData
