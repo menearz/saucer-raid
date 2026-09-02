@@ -25,7 +25,7 @@ test("wrap build uses root base and dist, not the Pages path", () => {
   assert.match(wrap, /outDir:.*["']dist["']/);
   assert.doesNotMatch(wrap, /base:\s*"\/saucer-raid\/"/);
   assert.match(cap, /appId:\s*"com\.menearz\.saucerraid"/);
-  assert.match(cap, /appName:\s*"Saucer Raid"/);
+  assert.match(cap, /appName:\s*"Alien Attack Saucer"/);
   assert.match(cap, /webDir:\s*"dist"/);
 });
 
@@ -35,11 +35,22 @@ test("native wrap projects exist with the store package id", () => {
   const pbx = read("ios/App/App.xcodeproj/project.pbxproj");
   const plist = read("ios/App/App/Info.plist");
   assert.match(gradle, /applicationId "com\.menearz\.saucerraid"/);
-  assert.match(strings, /<string name="app_name">Saucer Raid<\/string>/);
+  assert.match(strings, /<string name="app_name">Alien Attack Saucer<\/string>/);
   assert.match(pbx, /PRODUCT_BUNDLE_IDENTIFIER = com\.menearz\.saucerraid;/);
-  assert.match(plist, /<string>Saucer Raid<\/string>/);
+  assert.match(plist, /<string>Alien Attack Saucer<\/string>/);
   assert.ok(existsSync(join(ROOT, "resources/icon.png")), "icon slot missing");
   assert.ok(existsSync(join(ROOT, "WRAP.md")), "WRAP.md missing");
+});
+
+test("github.io spa title stays Saucer Raid; wrap stamps Alien Attack Saucer", () => {
+  const spa = read("spa/index.html");
+  const wrap = read("vite.wrap.config.ts");
+  assert.match(spa, /<title>Saucer Raid<\/title>/);
+  assert.match(spa, /apple-mobile-web-app-title" content="Saucer Raid"/);
+  assert.doesNotMatch(spa, /Alien Attack Saucer/);
+  assert.match(wrap, /VITE_WRAP/);
+  assert.match(wrap, /Alien Attack Saucer/);
+  assert.match(wrap, /transformIndexHtml/);
 });
 
 test("resources/icon.png is Spectre's store icon, not the 7KB placeholder", () => {

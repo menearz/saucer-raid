@@ -18,7 +18,7 @@ Game sim, physics, and art are not changed. Leftover better-auth / pglite / logi
 
 ## App identity
 
-- **Name:** Saucer Raid
+- **Name:** Alien Attack Saucer
 - **Package / bundle id:** `com.menearz.saucerraid`
 
 ## Icon slot (Spectre)

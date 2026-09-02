@@ -11,6 +11,17 @@ export default mergeConfig(
   pagesConfig,
   defineConfig({
     base: "/",
+    define: {
+      "import.meta.env.VITE_WRAP": JSON.stringify("true"),
+    },
+    plugins: [
+      {
+        name: "wrap-store-title",
+        transformIndexHtml(html) {
+          return html.replaceAll("Saucer Raid", "Alien Attack Saucer");
+        },
+      },
+    ],
     build: {
       outDir: path.resolve(import.meta.dirname, "dist"),
       emptyOutDir: true,
