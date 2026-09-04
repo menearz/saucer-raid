@@ -24,6 +24,8 @@ test("wrap build uses root base and dist, not the Pages path", () => {
   assert.match(wrap, /base:\s*"\/"/);
   assert.match(wrap, /outDir:.*["']dist["']/);
   assert.doesNotMatch(wrap, /base:\s*"\/saucer-raid\/"/);
+  assert.match(wrap, /pwa:\s*false/);
+  assert.doesNotMatch(wrap, /VitePWA/);
   assert.match(cap, /appId:\s*"com\.menearz\.saucerraid"/);
   assert.match(cap, /appName:\s*"Alien Attack Saucer"/);
   assert.match(cap, /webDir:\s*"dist"/);

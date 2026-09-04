@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/saucer-raid/sw.js', { scope: '/saucer-raid/' })})}
