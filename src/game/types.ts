@@ -1,4 +1,4 @@
-export type Phase = "title" | "playing" | "paused" | "over" | "upgrade";
+export type Phase = "title" | "playing" | "paused" | "upgrade";
 
 export type Alert = "calm" | "uneasy" | "alert" | "hostile" | "air-raid";
 
