@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Privacy policy for the free web and Android game Alien Attack Saucer / Saucer Raid."
+    />
+    <meta name="robots" content="index,follow" />
+    <title>Privacy Policy — Alien Attack Saucer / Saucer Raid</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #090b0e;
+        --fg: #e8e6df;
+        --muted: #8b9088;
+        --faint: #5c615a;
+        --accent: #6fdb9a;
+        --border: #2a2f28;
+        --surface: #12151b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu,
+          "Helvetica Neue", sans-serif;
+      }
+      main {
+        max-width: 42rem;
+        margin: 0 auto;
+        padding: 2.25rem 1.25rem 4rem;
+      }
+      p.kicker {
+        margin: 0 0 0.35rem;
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: 2rem;
+        line-height: 1.15;
+        font-weight: 650;
+      }
+      h2 {
+        margin: 2rem 0 0.6rem;
+        font-size: 1.15rem;
+        line-height: 1.3;
+      }
+      p,
+      li {
+        color: var(--fg);
+      }
+      p.lead,
+      .muted,
+      .updated {
+        color: var(--muted);
+      }
+      .updated {
+        margin: 0 0 1.5rem;
+        font-size: 0.9rem;
+      }
+      a {
+        color: var(--accent);
+      }
+      ul {
+        padding-left: 1.2rem;
+      }
+      li {
+        margin: 0.35rem 0;
+      }
+      .box {
+        margin: 1rem 0 0;
+        padding: 0.9rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+      }
+      .box p {
+        margin: 0;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.88em;
+        color: var(--accent);
+      }
+      footer {
+        margin-top: 2.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+        color: var(--faint);
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">Saucer Raid</p>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: 2 September 2026</p>
+      <p class="lead">
+        This policy covers the free web game and Android wrap of
+        <strong>Alien Attack Saucer</strong> / <strong>Saucer Raid</strong>.
+        It describes what the project’s source code actually does. It does not
+        invent a company, a second email address, or data practices that are
+        not in the code.
+      </p>
+
+      <h2>Who runs this</h2>
+      <p>
+        The operator is the GitHub account
+        <a href="https://github.com/menearz">menearz</a>, which publishes the
+        repository
+        <a href="https://github.com/menearz/saucer-raid">menearz/saucer-raid</a>
+        and the GitHub Pages site
+        <a href="https://menearz.github.io/saucer-raid/"
+          >https://menearz.github.io/saucer-raid/</a
+        >.
+      </p>
+      <p>
+        Contact for this policy and the game:
+        <a href="mailto:grokbotops@gmail.com">grokbotops@gmail.com</a>.
+        That is the only contact address given here.
+      </p>
+      <p>
+        Android package name in the wrap:
+        <code>com.menearz.saucerraid</code>. App label: Saucer Raid.
+      </p>
+
+      <h2>What this page is for</h2>
+      <p>
+        Google Play Console and similar listings need a public privacy URL.
+        Preferred URL:
+        <a href="https://menearz.github.io/saucer-raid/privacy"
+          >https://menearz.github.io/saucer-raid/privacy</a
+        >.
+      </p>
+      <p>
+        This HTML file is static. It loads no analytics, ads, fonts from a
+        third party, or other third-party scripts. It does not set cookies.
+      </p>
+
+      <h2>Short version</h2>
+      <div class="box">
+        <p>
+          Solo play keeps progress on your device. There is no account, no
+          in-app purchase library, and no ads or analytics SDK in the shipped
+          GitHub Pages game or the Android Capacitor wrap. Optional Wingman
+          matchmaking uses a public relay and public STUN servers only after
+          you host or join a room.
+        </p>
+      </div>
+
+      <h2>Data stored on your device</h2>
+      <p>
+        The game writes a few keys to browser / WebView
+        <code>localStorage</code>. They stay on that device unless you clear
+        site data or uninstall the app:
+      </p>
+      <ul>
+        <li>
+          <code>saucer-raid-best</code> — best raid score (a number).
+        </li>
+        <li>
+          <code>saucer-raid-progress</code> — campaign JSON: sector level,
+          salvage, run score, and upgrade ranks.
+        </li>
+        <li>
+          <code>saucer-raid-craft</code> — which hull you last picked (for
+          example <code>disc</code>).
+        </li>
+      </ul>
+      <p>
+        Nothing in the game code uploads those values to menearz or to
+        grokbotops@gmail.com. Salvage and hull upgrades are in-game only.
+        They are not real-money purchases.
+      </p>
+      <p>
+        Sound is generated on-device (Web Audio). Haptics use
+        <code>navigator.vibrate</code> and gamepad rumble where the browser
+        allows it. The Android wrap requests the <code>VIBRATE</code>
+        permission for that.
+      </p>
+      <p>
+        Android <code>allowBackup</code> is true on the wrap, so the operating
+        system may include WebView storage in a device backup. That is OS
+        backup behavior, not a game server.
+      </p>
+
+      <h2>Accounts, ads, purchases, analytics</h2>
+      <p>In the GitHub Pages SPA and the Android wrap, the code shows:</p>
+      <ul>
+        <li>
+          No player accounts. Auth is stubbed off
+          (<code>VITE_AUTH_ENABLED</code> false; Pages/wrap auth stub). The
+          hangar does not show Sign in on that build.
+        </li>
+        <li>
+          No in-app billing library, Play Billing, Stripe, or other IAP SDK.
+        </li>
+        <li>
+          No AdMob, AdSense, or other ads SDK.
+        </li>
+        <li>
+          No Firebase Analytics, Crashlytics, Google Analytics / gtag,
+          Mixpanel, Sentry, Amplitude, or similar product-analytics SDK.
+        </li>
+        <li>
+          No <code>google-services.json</code> in the tree; the Google
+          services Gradle plugin is not applied unless that file is present.
+        </li>
+        <li>
+          No <code>AD_ID</code> / advertising-ID permission in the Android
+          manifest.
+        </li>
+        <li>
+          No camera, microphone, location, or contacts permission in the
+          Android manifest. WebRTC is data-channel only (no
+          <code>getUserMedia</code> in game source).
+        </li>
+      </ul>
+      <p>
+        The repository still contains leftover better-auth / login / PGLite
+        files used by other local preview builds. Those are not enabled in the
+        public Pages or Android wrap described here.
+      </p>
+
+      <h2>Network use</h2>
+      <p>
+        Loading the web game from GitHub Pages means your browser requests
+        HTML, CSS, JavaScript, and art from GitHub’s Pages host. The Android
+        wrap ships those assets inside the app. The wrap still declares
+        <code>INTERNET</code> because optional Wingman uses the network.
+      </p>
+      <p>
+        Whether GitHub, Google Play, your device vendor, or your carrier keep
+        access logs (IP address, user agent, and similar) is
+        <strong>unknown / to-be-verified</strong> from this repository. Those
+        parties have their own policies. This project’s code does not
+        implement a first-party analytics collector.
+      </p>
+      <p>
+        Source stylesheet <code>src/styles.css</code> includes a Google Fonts
+        <code>@import</code> for IBM Plex Sans and Teko. The current Pages
+        CSS under <code>docs/assets/</code> does not contain
+        <code>fonts.googleapis.com</code>. Whether a future rebuild fetches
+        those fonts is <strong>to-be-verified</strong>. This privacy page does
+        not load Google Fonts.
+      </p>
+
+      <h2>Optional Wingman (peer-to-peer)</h2>
+      <p>
+        Wingman runs only after you tap Host or Join and enter or generate a
+        room code. Until then the game does not open the relay or WebRTC.
+      </p>
+      <p>When you do host or join, the code:</p>
+      <ul>
+        <li>
+          Makes a random peer id (<code>crypto.randomUUID</code> when
+          available).
+        </li>
+        <li>
+          Uses the display name <code>Host</code> or <code>Join</code> — not
+          your Google or Play account name.
+        </li>
+        <li>
+          May use <code>BroadcastChannel</code> so two tabs on the same origin
+          can find each other locally.
+        </li>
+        <li>
+          Posts signaling JSON (hello / bye / WebRTC offer, answer, and ICE
+          candidates) to the public ntfy.sh topic
+          <code>sr84-{room-code}</code> and opens
+          <code>wss://ntfy.sh/{topic}/ws</code>. That relay has no app-level
+          login.
+        </li>
+        <li>
+          Gathers ICE using public STUN:
+          <code>stun:stun.l.google.com:19302</code> and
+          <code>stun:stun.cloudflare.com:3478</code> (unless
+          <code>VITE_STUN_URLS</code> is set at build time).
+        </li>
+        <li>
+          Then opens a browser-to-browser WebRTC connection. ICE candidate
+          payloads can include network addresses. That is how WebRTC
+          connectivity checks work.
+        </li>
+      </ul>
+      <p>
+        You can instead copy a handshake tape (clipboard) and paste it in the
+        other browser so linking does not need the relay.
+      </p>
+      <p>
+        After a link is up, the P2P helper sends ping/pong on a data channel
+        to measure round-trip time. The hangar UI does not currently call the
+        helpers that would send raid/gameplay state. Whether a later version
+        will send game state over that channel is
+        <strong>to-be-verified</strong> if the code changes.
+      </p>
+      <p>
+        ntfy.sh, Google STUN, and Cloudflare STUN are third parties. What they
+        log is <strong>unknown / to-be-verified</strong> from this repo. Anyone
+        who knows a room code could subscribe to that public ntfy topic while
+        you are signaling.
+      </p>
+      <p>
+        There is also an unused HTTP signaling helper aimed at
+        <code>/api/rtc</code>. GitHub Pages is a static site, so that route is
+        not a live first-party API on the public game.
+      </p>
+
+      <h2>Sale of data</h2>
+      <p>
+        The code does not sell, rent, or broker player data. There is no ads
+        or analytics SDK in the shipped Pages/Android game through which data
+        could be sold. If that changes, this page should be updated to match
+        the code.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        Store age ratings and whether a listing is directed at children are
+        <strong>unknown / to-be-verified</strong> (they are listing choices,
+        not something this repo encodes). The shipped game does not create
+        accounts or ask for a name, email, or age. Do not let a child use
+        Wingman with people you do not trust: signaling is on a public topic
+        keyed by the room code.
+      </p>
+
+      <h2>Your choices</h2>
+      <ul>
+        <li>
+          Web: clear this site’s data in the browser to drop local progress.
+        </li>
+        <li>
+          Android: clear app storage or uninstall to drop local progress.
+        </li>
+        <li>Do not Host or Join if you do not want Wingman networking.</li>
+      </ul>
+      <p>
+        The operator does not hold a server copy of your salvage, score, or
+        hull pick, so there is nothing extra to delete on a first-party game
+        server. Questions:
+        <a href="mailto:grokbotops@gmail.com">grokbotops@gmail.com</a>.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        If the game starts collecting more, selling data, adding ads,
+        accounts, or IAP, this page should be revised. The date at the top
+        is the last time this text was aligned with the code as searched.
+      </p>
+
+      <footer>
+        <p>
+          Alien Attack Saucer / Saucer Raid · operator
+          <a href="https://github.com/menearz">menearz</a> ·
+          <a href="mailto:grokbotops@gmail.com">grokbotops@gmail.com</a>
+        </p>
+        <p>
+          <a href="https://menearz.github.io/saucer-raid/">Play the game</a>
+          ·
+          <a href="https://github.com/menearz/saucer-raid">Source</a>
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
