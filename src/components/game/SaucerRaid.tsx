@@ -201,6 +201,10 @@ export function SaucerRaid() {
   );
 }
 
+/** github.io hangar title. Play wrap uses WRAP_HANGAR_TITLE. */
+const SITE_HANGAR_TITLE = "Saucer Raid";
+const WRAP_HANGAR_TITLE = "Alien Attack Saucer";
+
 function TitleScreen({
   ready,
   best,
@@ -220,6 +224,10 @@ function TitleScreen({
 }) {
   const level = useHud((s) => s.level);
   const salvage = useHud((s) => s.salvage);
+  const wrap = import.meta.env.VITE_WRAP === "true";
+  useEffect(() => {
+    if (wrap) document.title = WRAP_HANGAR_TITLE;
+  }, [wrap]);
   return (
     <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto overscroll-contain pointer-events-auto [touch-action:manipulation]">
       <img
@@ -253,14 +261,8 @@ function TitleScreen({
           <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-accent">
             Sector {level}
           </p>
-          <h1 className="font-display text-5xl leading-[0.85] tracking-tight sm:text-6xl landscape:text-6xl">
-            Saucer
-            <br />
-            Raid
-          </h1>
-          <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted landscape:mt-2">
-            Pick a hull. Survive the clock. Upgrade between raids.
-          </p>
+          <HangarWordmark wrap={wrap} />
+          <HangarPitch />
           {best > 0 && (
             <p className="mt-2 text-xs text-muted">
               Best <span className="tabular-nums text-fg">{best}</span>
@@ -274,20 +276,58 @@ function TitleScreen({
           )}
           <div className="hidden landscape:block">
             <HangarInfo />
-            <LaunchButton ready={ready} level={level} onStart={onStart} />
+            <LaunchButton ready={ready} onStart={onStart} />
             {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
           </div>
         </div>
         <HangarPreview />
         <div className="landscape:hidden">
           <HangarInfo />
-          <LaunchButton ready={ready} level={level} onStart={onStart} />
+          <LaunchButton ready={ready} onStart={onStart} />
           {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
         </div>
       </div>
       <div className="relative z-10 w-full max-w-xs shrink-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
         <NetBay />
       </div>
+    </div>
+  );
+}
+
+function HangarWordmark({ wrap }: { wrap: boolean }) {
+  const name = wrap ? WRAP_HANGAR_TITLE : SITE_HANGAR_TITLE;
+  return (
+    <h1
+      aria-label={name}
+      className="font-display text-5xl leading-[0.85] tracking-tight sm:text-6xl landscape:text-5xl"
+    >
+      {wrap ? (
+        <>
+          Alien Attack
+          <br />
+          Saucer
+        </>
+      ) : (
+        <>
+          Saucer
+          <br />
+          Raid
+        </>
+      )}
+    </h1>
+  );
+}
+
+function HangarPitch() {
+  return (
+    <div className="mt-2 max-w-sm space-y-1 landscape:mt-1.5">
+      <p className="text-sm font-medium leading-snug text-fg">You are the saucer.</p>
+      <p className="text-xs leading-snug text-muted sm:text-sm">
+        Fly the farm. Beam up cows and people. Blast what shoots back.
+      </p>
+      <p className="text-xs leading-snug text-muted sm:text-sm">
+        Stick or WASD to fly. Hold Beam to grab. Hold Fire to shoot. Beat the clock.
+      </p>
     </div>
   );
 }
@@ -450,11 +490,9 @@ function StatBar({ label, value, max }: { label: string; value: number; max: num
 
 function LaunchButton({
   ready,
-  level,
   onStart,
 }: {
   ready: boolean;
-  level: number;
   onStart: () => void;
 }) {
   return (
@@ -467,7 +505,7 @@ function LaunchButton({
       }}
       className="mt-4 h-12 w-full max-w-xs rounded-[20px] bg-fg px-6 font-medium text-bg transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-50 landscape:mt-4"
     >
-      {ready ? `Launch sector ${level}` : "Loading the valley…"}
+      {ready ? "Launch" : "Loading the valley…"}
     </button>
   );
 }
