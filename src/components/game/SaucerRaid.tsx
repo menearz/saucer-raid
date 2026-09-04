@@ -167,21 +167,6 @@ export function SaucerRaid() {
         />
       )}
 
-      {hud.phase === "over" && (
-        <Overlay>
-          <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">
-            {hud.reason === "destroyed" ? "Saucer down" : "Time expired"}
-          </p>
-          <h2 className="font-display text-6xl leading-none tracking-tight landscape:text-5xl">
-            Raid over
-          </h2>
-          <div className="mt-6 flex flex-col gap-2 landscape:mt-4">
-            <Primary onClick={() => begin("retry")}>Retry sector</Primary>
-            <Ghost onClick={toTitle}>Hangar</Ghost>
-          </div>
-        </Overlay>
-      )}
-
       {hud.phase === "title" && (
         <TitleScreen
           ready={ready}
@@ -1170,14 +1155,5 @@ function Ghost({
     >
       {children}
     </button>
-  );
-}
-
-function Stat({ k, v }: { k: string; v: number }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted">{k}</dt>
-      <dd className="tabular-nums">{v}</dd>
-    </div>
   );
 }
