@@ -105,6 +105,8 @@ test("hangar chrome uses the i18n helper; picker and later switch exist", () => 
   assert.match(I18N, /LANG_KEY = "saucer-raid-lang"/);
   assert.match(HUD, /from "@\/game\/i18n"/);
   assert.match(HUD, /<LanguagePicker/);
+  assert.match(HUD, /readyLang && !picked/);
+  assert.match(HUD, /hydrate\(\)/);
   assert.match(HUD, /<LangSwitch/);
   assert.match(HUD, /Language · Idioma/);
   assert.match(HUD, />\s*English\s*</);

@@ -273,21 +273,43 @@ export function applyDocumentLang(lang: Lang, wrap = false) {
   document.title = translate(lang, wrap ? "wrapTitle" : "siteTitle");
 }
 
-const boot = typeof localStorage !== "undefined" ? readLang() : null;
+function viteFlag(name: "VITE_PAGES" | "VITE_WRAP"): boolean {
+  try {
+    return import.meta.env?.[name] === "true";
+  } catch {
+    return false;
+  }
+}
+
+function initialI18n(): { lang: Lang; picked: boolean; ready: boolean } {
+  // Client-only Pages/wrap bundles can read storage before first paint.
+  if (viteFlag("VITE_PAGES") || viteFlag("VITE_WRAP")) {
+    const saved = readLang();
+    return { lang: saved ?? "en", picked: saved != null, ready: true };
+  }
+  // TanStack Start SSR + client hydration must match (English, no picker).
+  return { lang: "en", picked: true, ready: false };
+}
 
 type I18nState = {
   lang: Lang;
   picked: boolean;
+  ready: boolean;
   setLang: (lang: Lang) => void;
+  hydrate: () => void;
 };
 
-export const useI18n = create<I18nState>((set) => ({
-  lang: boot ?? "en",
-  picked: boot != null,
+export const useI18n = create<I18nState>((set, get) => ({
+  ...initialI18n(),
   setLang: (lang) => {
     if (!isLang(lang)) return;
     writeLang(lang);
-    set({ lang, picked: true });
+    set({ lang, picked: true, ready: true });
+  },
+  hydrate: () => {
+    if (get().ready) return;
+    const saved = readLang();
+    set({ lang: saved ?? "en", picked: saved != null, ready: true });
   },
 }));
 

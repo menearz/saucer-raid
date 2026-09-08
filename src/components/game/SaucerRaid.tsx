@@ -51,9 +51,14 @@ export function SaucerRaid() {
   const pages = import.meta.env.VITE_PAGES === "true";
   const { user, isPending } = useCurrentUserState();
   const picked = useI18n((s) => s.picked);
+  const readyLang = useI18n((s) => s.ready);
   const setLang = useI18n((s) => s.setLang);
   const lang = useI18n((s) => s.lang);
   const t = useT();
+
+  useEffect(() => {
+    useI18n.getState().hydrate();
+  }, []);
 
   useEffect(() => {
     let dead = false;
@@ -198,7 +203,7 @@ export function SaucerRaid() {
         />
       )}
 
-      {hud.phase === "title" && !picked && (
+      {hud.phase === "title" && readyLang && !picked && (
         <LanguagePicker
           onPick={(lang) => {
             setLang(lang);
