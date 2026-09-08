@@ -107,8 +107,8 @@ test("hangar chrome uses the i18n helper; picker and later switch exist", () => 
   assert.match(HUD, /<LanguagePicker/);
   assert.match(HUD, /<LangSwitch/);
   assert.match(HUD, /Language · Idioma/);
-  assert.match(HUD, />English</);
-  assert.match(HUD, />Español</);
+  assert.match(HUD, />\s*English\s*</);
+  assert.match(HUD, />\s*Español\s*</);
   assert.match(HUD, /t\("launch"\)/);
   assert.match(HUD, /t\("host"\)/);
   assert.match(HUD, /t\("join"\)/);
