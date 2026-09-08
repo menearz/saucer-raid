@@ -25,6 +25,15 @@ import {
   type MapMark,
   type UpgradeId,
 } from "@/game/progress";
+import {
+  ALERT_KEYS,
+  UPGRADE_KEYS,
+  WEAPON_KEYS,
+  applyDocumentLang,
+  useI18n,
+  useT,
+  type Lang,
+} from "@/game/i18n";
 import { ALERTS } from "@/game/types";
 import { createWorld, loadBest } from "@/game/world";
 import { Link } from "@tanstack/react-router";
@@ -41,6 +50,15 @@ export function SaucerRaid() {
   const hud = useHud();
   const pages = import.meta.env.VITE_PAGES === "true";
   const { user, isPending } = useCurrentUserState();
+  const picked = useI18n((s) => s.picked);
+  const readyLang = useI18n((s) => s.ready);
+  const setLang = useI18n((s) => s.setLang);
+  const lang = useI18n((s) => s.lang);
+  const t = useT();
+
+  useEffect(() => {
+    useI18n.getState().hydrate();
+  }, []);
 
   useEffect(() => {
     let dead = false;
@@ -120,6 +138,7 @@ export function SaucerRaid() {
   return (
     <div
       ref={wrapRef}
+      lang={lang}
       className="relative h-dvh w-full overflow-hidden bg-bg text-fg"
       style={{ touchAction: "none" }}
     >
@@ -142,8 +161,8 @@ export function SaucerRaid() {
 
       {hud.phase === "paused" && (
         <Overlay>
-          <h2 className="font-display text-5xl tracking-tight landscape:text-4xl">Paused</h2>
-          <p className="mt-2 text-sm text-muted">The raid is on hold.</p>
+          <h2 className="font-display text-5xl tracking-tight landscape:text-4xl">{t("paused")}</h2>
+          <p className="mt-2 text-sm text-muted">{t("raidOnHold")}</p>
           <div className="mt-6 flex flex-col gap-2 landscape:mt-4">
             <Primary
               onClick={() => {
@@ -151,9 +170,10 @@ export function SaucerRaid() {
                 handleRef.current?.resume();
               }}
             >
-              Resume
+              {t("resume")}
             </Primary>
-            <Ghost onClick={() => begin("retry")}>Restart raid</Ghost>
+            <Ghost onClick={() => begin("retry")}>{t("restartRaid")}</Ghost>
+            <LangSwitch />
           </div>
         </Overlay>
       )}
@@ -182,13 +202,18 @@ export function SaucerRaid() {
           showAccount={!pages}
         />
       )}
+
+      {hud.phase === "title" && readyLang && !picked && (
+        <LanguagePicker
+          onPick={(lang) => {
+            setLang(lang);
+            haptics.tap();
+          }}
+        />
+      )}
     </div>
   );
 }
-
-/** github.io hangar title. Play wrap uses WRAP_HANGAR_TITLE. */
-const SITE_HANGAR_TITLE = "Saucer Raid";
-const WRAP_HANGAR_TITLE = "Alien Attack Saucer";
 
 function TitleScreen({
   ready,
@@ -210,9 +235,11 @@ function TitleScreen({
   const level = useHud((s) => s.level);
   const salvage = useHud((s) => s.salvage);
   const wrap = import.meta.env.VITE_WRAP === "true";
+  const lang = useI18n((s) => s.lang);
+  const t = useT();
   useEffect(() => {
-    if (wrap) document.title = WRAP_HANGAR_TITLE;
-  }, [wrap]);
+    applyDocumentLang(lang, wrap);
+  }, [wrap, lang]);
   return (
     <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto overscroll-contain pointer-events-auto [touch-action:manipulation]">
       <img
@@ -236,7 +263,7 @@ function TitleScreen({
               to="/login"
               className="rounded-full border border-border bg-surface/80 px-4 py-2 text-sm text-fg"
             >
-              Sign in
+              {t("signIn")}
             </Link>
           </SignedOut>
         )}
@@ -244,17 +271,17 @@ function TitleScreen({
       <div className="relative z-10 flex flex-1 flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] landscape:flex-row landscape:items-center landscape:gap-6 landscape:px-8">
         <div className="landscape:w-[min(26rem,42%)] landscape:shrink-0">
           <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-accent">
-            Sector {level}
+            {t("sector", { n: level })}
           </p>
           <HangarWordmark wrap={wrap} />
           <HangarPitch />
           {best > 0 && (
             <p className="mt-2 text-xs text-muted">
-              Best <span className="tabular-nums text-fg">{best}</span>
+              {t("best")} <span className="tabular-nums text-fg">{best}</span>
               {salvage > 0 && (
                 <>
                   {" "}
-                  · Salvage <span className="tabular-nums text-fg">{salvage}</span>
+                  · {t("salvage")} <span className="tabular-nums text-fg">{salvage}</span>
                 </>
               )}
             </p>
@@ -274,45 +301,34 @@ function TitleScreen({
       </div>
       <div className="relative z-10 w-full max-w-xs shrink-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
         <NetBay />
+        <LangSwitch />
       </div>
     </div>
   );
 }
 
 function HangarWordmark({ wrap }: { wrap: boolean }) {
-  const name = wrap ? WRAP_HANGAR_TITLE : SITE_HANGAR_TITLE;
+  const t = useT();
+  const name = wrap ? t("wrapTitle") : t("siteTitle");
   return (
     <h1
       aria-label={name}
       className="font-display text-5xl leading-[0.85] tracking-tight sm:text-6xl landscape:text-5xl"
     >
-      {wrap ? (
-        <>
-          Alien Attack
-          <br />
-          Saucer
-        </>
-      ) : (
-        <>
-          Saucer
-          <br />
-          Raid
-        </>
-      )}
+      {wrap ? t("wrapTitleL1") : t("siteTitleL1")}
+      <br />
+      {wrap ? t("wrapTitleL2") : t("siteTitleL2")}
     </h1>
   );
 }
 
 function HangarPitch() {
+  const t = useT();
   return (
     <div className="mt-2 max-w-sm space-y-1 landscape:mt-1.5">
-      <p className="text-sm font-medium leading-snug text-fg">You are the saucer.</p>
-      <p className="text-xs leading-snug text-muted sm:text-sm">
-        Fly the farm. Beam up cows and people. Blast what shoots back.
-      </p>
-      <p className="text-xs leading-snug text-muted sm:text-sm">
-        Stick or WASD to fly. Hold Beam to grab. Hold Fire to shoot. Beat the clock.
-      </p>
+      <p className="text-sm font-medium leading-snug text-fg">{t("pitchLead")}</p>
+      <p className="text-xs leading-snug text-muted sm:text-sm">{t("pitchFly")}</p>
+      <p className="text-xs leading-snug text-muted sm:text-sm">{t("pitchControls")}</p>
     </div>
   );
 }
@@ -333,10 +349,11 @@ function HangarPreview() {
   const craft = selectedCraft(craftId);
   const swipeX = useRef<number | null>(null);
   const src = assetUrl(`/game/${craft.portrait}.png`);
+  const t = useT();
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-2 landscape:py-0">
       <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
-        Hangar
+        {t("hangar")}
       </p>
       <div
         className="relative flex w-full max-w-lg items-center justify-center"
@@ -356,7 +373,7 @@ function HangarPreview() {
       >
         <button
           type="button"
-          aria-label="Previous craft"
+          aria-label={t("prevCraft")}
           onPointerDown={(e) => {
             e.stopPropagation();
             pickCraft(cycleCraftId(craftId, -1));
@@ -377,7 +394,7 @@ function HangarPreview() {
         </div>
         <button
           type="button"
-          aria-label="Next craft"
+          aria-label={t("nextCraft")}
           onPointerDown={(e) => {
             e.stopPropagation();
             pickCraft(cycleCraftId(craftId, 1));
@@ -425,6 +442,7 @@ function HangarPreview() {
 function HangarInfo() {
   const craftId = useHud((s) => s.craftId);
   const craft = selectedCraft(craftId);
+  const t = useT();
   return (
     <div className="mt-3 max-w-sm landscape:mt-4">
       <p className="text-[10px] uppercase tracking-widest text-accent">{craft.tag}</p>
@@ -433,12 +451,12 @@ function HangarInfo() {
       </p>
       <p className="mt-1 text-xs leading-snug text-muted">{craft.blurb}</p>
       <div className="mt-3 space-y-1.5">
-        <StatBar label="Speed" value={craft.speed} max={STAT_MAX.speed} />
-        <StatBar label="Hull" value={craft.hp} max={STAT_MAX.hp} />
-        <StatBar label="Beam" value={craft.beam} max={STAT_MAX.beam} />
-        <StatBar label="Laser" value={craft.laser} max={STAT_MAX.laser} />
+        <StatBar label={t("statSpeed")} value={craft.speed} max={STAT_MAX.speed} />
+        <StatBar label={t("statHull")} value={craft.hp} max={STAT_MAX.hp} />
+        <StatBar label={t("statBeam")} value={craft.beam} max={STAT_MAX.beam} />
+        <StatBar label={t("statLaser")} value={craft.laser} max={STAT_MAX.laser} />
         <StatBar
-          label="Cool"
+          label={t("statCool")}
           value={STAT_MAX.heat - craft.heatMult}
           max={STAT_MAX.heat - STAT_MIN.heat}
         />
@@ -480,6 +498,7 @@ function LaunchButton({
   ready: boolean;
   onStart: () => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -490,14 +509,16 @@ function LaunchButton({
       }}
       className="mt-4 h-12 w-full max-w-xs rounded-[20px] bg-fg px-6 font-medium text-bg transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-50 landscape:mt-4"
     >
-      {ready ? "Launch" : "Loading the valley…"}
+      {ready ? t("launch") : t("loading")}
     </button>
   );
 }
 
 function NetBay() {
+  const t = useT();
+  const lang = useI18n((s) => s.lang);
   const [code, setCode] = useState("");
-  const [status, setStatus] = useState("Enter a room code, or Host to make one.");
+  const [status, setStatus] = useState(() => t("netHint"));
   const [peers, setPeers] = useState<PeerInfo[]>([]);
   const [tape, setTape] = useState("");
   const [role, setRole] = useState<"Host" | "Join" | null>(null);
@@ -515,6 +536,10 @@ function NetBay() {
   }, []);
 
   useEffect(() => {
+    if (role == null) setStatus(t("netHint"));
+  }, [lang, role, t]);
+
+  useEffect(() => {
     if (role !== "Join") return;
     const tick = () => {
       const live = peers.filter((p) => p.connectionState === "connected").length;
@@ -525,12 +550,12 @@ function NetBay() {
         remoteCount: peers.length,
         linkedCount: live,
       });
-      if (msg) setStatus(msg);
+      if (msg) setStatus(t("netRoomEmpty", { room: code }));
     };
     tick();
     const id = setInterval(tick, 500);
     return () => clearInterval(id);
-  }, [role, code, peers]);
+  }, [role, code, peers, lang, t]);
 
   const connect = (room: string, name: "Host" | "Join") => {
     roomRef.current?.close();
@@ -546,24 +571,24 @@ function NetBay() {
       name,
       signal,
       onConnected: () => {
-        setStatus(`In room ${room}. Waiting for a wingman…`);
+        setStatus(t("netInRoom", { room }));
       },
       onPeersChanged: (list) => {
         setPeers(list);
         const live = list.filter((p) => p.connectionState === "connected");
         if (live.length) {
           setStatus(
-            `Linked with ${live.length} wingman${live.length === 1 ? "" : "s"} in ${room}.`,
+            t("netLinked", { n: live.length, s: live.length === 1 ? "" : "s", room }),
           );
         } else if (list.length) {
-          setStatus(`Found ${list.length} in room ${room}. Linking…`);
+          setStatus(t("netFound", { n: list.length, room }));
         }
       },
     });
     signalRef.current = signal;
     roomRef.current = p2p;
     void p2p.join();
-    setStatus(`Opening room ${room}…`);
+    setStatus(t("netOpening", { room }));
   };
 
   const host = () => {
@@ -576,7 +601,7 @@ function NetBay() {
   const join = () => {
     const room = code.trim().toUpperCase();
     if (!room) {
-      setStatus("Type the room code first.");
+      setStatus(t("netTypeCode"));
       return;
     }
     haptics.tap();
@@ -588,26 +613,26 @@ function NetBay() {
     setTape(next);
     try {
       await navigator.clipboard.writeText(next);
-      setStatus("Handshake copied. Paste it in the other browser.");
+      setStatus(t("netHandshakeCopied"));
     } catch {
-      setStatus("Copy failed. Select the handshake and copy it yourself.");
+      setStatus(t("netCopyFailed"));
     }
   };
 
   const applyHandshake = () => {
     if (!tape.trim()) {
-      setStatus("Paste a handshake first.");
+      setStatus(t("netPasteFirst"));
       return;
     }
     if (!signalRef.current) {
-      setStatus("Host or Join a room, then paste the handshake.");
+      setStatus(t("netHostOrJoin"));
       return;
     }
     try {
       signalRef.current.importHandshake(tape);
-      setStatus("Handshake applied. Linking…");
+      setStatus(t("netHandshakeApplied"));
     } catch {
-      setStatus("That handshake could not be read.");
+      setStatus(t("netHandshakeBad"));
     }
   };
 
@@ -616,10 +641,10 @@ function NetBay() {
   return (
     <div className="mt-4 max-w-xs rounded-xl border border-border bg-surface/80 p-3">
       <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
-        Wingman
+        {t("wingman")}
       </p>
       <label className="mt-2 block text-xs text-muted">
-        Room code
+        {t("roomCode")}
         <input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -640,7 +665,7 @@ function NetBay() {
           }}
           className="h-10 flex-1 rounded-[14px] bg-fg text-sm font-medium text-bg"
         >
-          Host
+          {t("host")}
         </button>
         <button
           type="button"
@@ -650,23 +675,18 @@ function NetBay() {
           }}
           className="h-10 flex-1 rounded-[14px] border border-border bg-surface-2 text-sm text-fg"
         >
-          Join
+          {t("join")}
         </button>
       </div>
       <p className="mt-2 text-xs text-muted">{status}</p>
       {linked > 0 && (
         <p className="mt-1 text-[10px] uppercase tracking-widest text-accent">
-          {linked} linked
+          {t("netLinkedCount", { n: linked })}
         </p>
       )}
       <details className="mt-2 text-xs text-muted">
-        <summary className="cursor-pointer select-none">
-          Handshake if the relay is quiet
-        </summary>
-        <p className="mt-1 leading-snug">
-          Two tabs on this site link themselves. For another computer, copy this
-          handshake into the other browser after Host and Join.
-        </p>
+        <summary className="cursor-pointer select-none">{t("netHandshakeSummary")}</summary>
+        <p className="mt-1 leading-snug">{t("netHandshakeHelp")}</p>
         <textarea
           value={tape}
           onChange={(e) => setTape(e.target.value)}
@@ -682,7 +702,7 @@ function NetBay() {
             }}
             className="h-8 flex-1 rounded-lg border border-border bg-surface-2"
           >
-            Copy handshake
+            {t("netCopyHandshake")}
           </button>
           <button
             type="button"
@@ -692,7 +712,7 @@ function NetBay() {
             }}
             className="h-8 flex-1 rounded-lg border border-border bg-surface-2"
           >
-            Paste handshake
+            {t("netPasteHandshake")}
           </button>
         </div>
       </details>
@@ -701,6 +721,7 @@ function NetBay() {
 }
 
 function NewCampaignButton({ onNewCampaign }: { onNewCampaign: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -710,7 +731,7 @@ function NewCampaignButton({ onNewCampaign }: { onNewCampaign: () => void }) {
       }}
       className="mt-2 h-10 text-xs text-muted"
     >
-      New campaign
+      {t("newCampaign")}
     </button>
   );
 }
@@ -759,9 +780,11 @@ function HudOverlay({
   const s = Math.floor(hud.timeLeft % 60)
     .toString()
     .padStart(2, "0");
+  const t = useT();
   const alert = ALERTS.find((a) => a.id === hud.alert) ?? ALERTS[0]!;
   const hot = hud.alert === "hostile" || hud.alert === "air-raid";
-  const weapon = ["Laser", "Laser+", "Twin", "Spread"][Math.min(3, hud.weaponTier)] ?? "Laser";
+  const weaponKey = WEAPON_KEYS[Math.min(3, hud.weaponTier)] ?? "weaponLaser";
+  const weapon = t(weaponKey);
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))]">
       <div className="flex items-start justify-between gap-3">
@@ -770,11 +793,11 @@ function HudOverlay({
             {hud.score}
           </p>
           <p className="text-[10px] uppercase tracking-widest text-muted">
-            Sector {hud.level}
+            {t("sector", { n: hud.level })}
           </p>
           {hud.combo > 1 && (
             <p className="text-xs font-medium uppercase tracking-widest text-accent">
-              Combo {hud.combo}
+              {t("combo", { n: hud.combo })}
             </p>
           )}
         </div>
@@ -783,7 +806,7 @@ function HudOverlay({
             {m}:{s}
           </p>
           <p className="text-[10px] uppercase tracking-widest text-muted">
-            {hud.abducted} taken · {hud.destroyed} wrecked
+            {t("takenWrecked", { a: hud.abducted, d: hud.destroyed })}
           </p>
         </div>
       </div>
@@ -816,7 +839,7 @@ function HudOverlay({
             hot ? "bg-danger/20 text-danger" : "bg-surface/80 text-muted"
           }`}
         >
-          {alert.label}
+          {t(ALERT_KEYS[alert.id] ?? "alertCalm")}
         </p>
         {hud.weaponTier > 0 && (
           <p className="inline-flex rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-accent">
@@ -825,7 +848,7 @@ function HudOverlay({
         )}
         {hud.cloakT > 0 && (
           <p className="inline-flex rounded-full bg-fg/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-fg">
-            Cloak {hud.cloakT.toFixed(1)}s
+            {t("cloak", { t: hud.cloakT.toFixed(1) })}
           </p>
         )}
       </div>
@@ -834,6 +857,7 @@ function HudOverlay({
 }
 
 function MiniMap({ marks }: { marks: MapMark[] }) {
+  const t = useT();
   return (
     <div className="pointer-events-none absolute bottom-[max(9.5rem,calc(env(safe-area-inset-bottom)+8.5rem))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 landscape:top-[max(4.25rem,calc(env(safe-area-inset-top)+3.4rem))] landscape:bottom-auto">
       <div className="relative h-28 w-28 overflow-hidden rounded-lg border border-border bg-bg/70 landscape:h-24 landscape:w-24">
@@ -860,9 +884,9 @@ function MiniMap({ marks }: { marks: MapMark[] }) {
         ))}
       </div>
       <div className="mt-1 flex flex-wrap gap-x-2 text-[9px] uppercase tracking-widest text-faint">
-        <span className="text-warn">Gun</span>
-        <span className="text-fg">Cloak</span>
-        <span className="text-danger">Army</span>
+        <span className="text-warn">{t("mapGun")}</span>
+        <span className="text-fg">{t("mapCloak")}</span>
+        <span className="text-danger">{t("mapArmy")}</span>
       </div>
     </div>
   );
@@ -886,6 +910,7 @@ function UpgradeBay({
   onRetry: () => void;
   onHangar: () => void;
 }) {
+  const t = useT();
   const [tick, setTick] = useState(0);
   const p = loadProgress();
   const survived = hud.reason === "time";
@@ -899,15 +924,17 @@ function UpgradeBay({
   return (
     <Overlay>
       <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">
-        {survived ? `Sector ${hud.level} cleared` : "Saucer down"}
+        {survived ? t("sectorCleared", { n: hud.level }) : t("saucerDown")}
       </p>
       <h2 className="font-display text-5xl leading-none tracking-tight landscape:text-4xl">
-        {survived ? "Upgrade bay" : "Refit"}
+        {survived ? t("upgradeBay") : t("refit")}
       </h2>
       <p className="mt-2 font-display text-3xl text-accent tabular-nums">{hud.score}</p>
       <p className="text-xs text-muted">
-        Salvage <span className="tabular-nums text-fg">{p.salvage}</span>
-        {hud.stats ? ` · ${hud.stats.abducted} taken · ${hud.stats.destroyed} wrecked` : ""}
+        {t("salvage")} <span className="tabular-nums text-fg">{p.salvage}</span>
+        {hud.stats
+          ? ` · ${t("takenWrecked", { a: hud.stats.abducted, d: hud.stats.destroyed })}`
+          : ""}
       </p>
       <ul className="mt-4 space-y-2">
         {UPGRADES.map((u) => {
@@ -919,12 +946,12 @@ function UpgradeBay({
             <li key={u.id} className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">
-                  {u.name}{" "}
+                  {t(UPGRADE_KEYS[u.id]?.name ?? "upEngines")}{" "}
                   <span className="text-xs text-muted">
                     {rank}/{u.max}
                   </span>
                 </p>
-                <p className="text-xs text-faint">{u.blurb}</p>
+                <p className="text-xs text-faint">{t(UPGRADE_KEYS[u.id]?.blurb ?? "upEnginesBlurb")}</p>
               </div>
               <button
                 type="button"
@@ -935,7 +962,7 @@ function UpgradeBay({
                 }}
                 className="h-10 min-w-16 rounded-full border border-border bg-surface-2 px-3 text-xs disabled:opacity-40"
               >
-                {maxed ? "Max" : `${cost}`}
+                {maxed ? t("max") : `${cost}`}
               </button>
             </li>
           );
@@ -943,11 +970,11 @@ function UpgradeBay({
       </ul>
       <div className="mt-5 flex flex-col gap-2">
         {survived ? (
-          <Primary onClick={onNext}>Next sector</Primary>
+          <Primary onClick={onNext}>{t("nextSector")}</Primary>
         ) : (
-          <Primary onClick={onRetry}>Retry sector</Primary>
+          <Primary onClick={onRetry}>{t("retrySector")}</Primary>
         )}
-        <Ghost onClick={onHangar}>Hangar</Ghost>
+        <Ghost onClick={onHangar}>{t("hangar")}</Ghost>
       </div>
     </Overlay>
   );
@@ -964,6 +991,7 @@ function TouchLayer({
   muted: boolean;
   onMute: () => void;
 }) {
+  const t = useT();
   const moveRef = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
 
@@ -979,10 +1007,10 @@ function TouchLayer({
   return (
     <>
       <div className="absolute top-[max(4.5rem,calc(env(safe-area-inset-top)+3.6rem))] right-[max(0.75rem,env(safe-area-inset-right))] z-20 flex gap-2 landscape:top-[max(0.45rem,env(safe-area-inset-top))] landscape:right-[max(5.5rem,calc(env(safe-area-inset-right)+4.75rem))]">
-        <IconBtn onClick={onMute} label={muted ? "Unmute" : "Mute"}>
+        <IconBtn onClick={onMute} label={muted ? t("unmute") : t("mute")}>
           {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
         </IconBtn>
-        <IconBtn onClick={onPause} label="Pause">
+        <IconBtn onClick={onPause} label={t("pause")}>
           <Pause className="size-4" />
         </IconBtn>
       </div>
@@ -1034,7 +1062,7 @@ function TouchLayer({
 
       <div className="absolute bottom-[max(4.25rem,calc(env(safe-area-inset-bottom)+3.25rem))] right-[max(1rem,env(safe-area-inset-right))] z-20 flex items-end gap-3 landscape:bottom-[max(1rem,env(safe-area-inset-bottom))] landscape:flex-col-reverse landscape:gap-2">
         <HoldBtn
-          label="Beam"
+          label={t("beam")}
           onHold={(v) => {
             if (v) haptics.tap();
             input.setBeam(v);
@@ -1042,7 +1070,7 @@ function TouchLayer({
           className="h-[72px] w-[72px] landscape:h-16 landscape:w-16"
         />
         <HoldBtn
-          label="Fire"
+          label={t("fire")}
           onHold={(v) => {
             if (v) haptics.tap();
             input.setFire(v);
@@ -1105,6 +1133,73 @@ function IconBtn({
   );
 }
 
+function LanguagePicker({ onPick }: { onPick: (lang: Lang) => void }) {
+  return (
+    <Overlay>
+      <h2 className="font-display text-5xl tracking-tight landscape:text-4xl">
+        Language · Idioma
+      </h2>
+      <div className="mt-6 flex flex-col gap-2 landscape:mt-4">
+        <Primary icon={false} onClick={() => onPick("en")}>
+          English
+        </Primary>
+        <Ghost onClick={() => onPick("es")}>Español</Ghost>
+      </div>
+    </Overlay>
+  );
+}
+
+function LangSwitch() {
+  const lang = useI18n((s) => s.lang);
+  const setLang = useI18n((s) => s.setLang);
+  const t = useT();
+  return (
+    <div className="mt-3">
+      <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
+        {t("language")}
+      </p>
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          aria-pressed={lang === "en"}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (lang !== "en") {
+              setLang("en");
+              haptics.tap();
+            }
+          }}
+          className={`h-10 flex-1 rounded-[14px] text-sm font-medium ${
+            lang === "en"
+              ? "bg-fg text-bg"
+              : "border border-border bg-surface-2 text-fg"
+          }`}
+        >
+          English
+        </button>
+        <button
+          type="button"
+          aria-pressed={lang === "es"}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (lang !== "es") {
+              setLang("es");
+              haptics.tap();
+            }
+          }}
+          className={`h-10 flex-1 rounded-[14px] text-sm font-medium ${
+            lang === "es"
+              ? "bg-fg text-bg"
+              : "border border-border bg-surface-2 text-fg"
+          }`}
+        >
+          Español
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
     <div className="absolute inset-0 z-30 flex items-end justify-center bg-bg/70 px-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pb-16 pt-10 backdrop-blur-[2px] landscape:items-center landscape:pb-6 landscape:pt-6 sm:items-center sm:pb-10 pointer-events-auto [touch-action:manipulation]">
@@ -1118,9 +1213,11 @@ function Overlay({ children }: { children: React.ReactNode }) {
 function Primary({
   children,
   onClick,
+  icon = true,
 }: {
   children: React.ReactNode;
   onClick: () => void;
+  icon?: boolean;
 }) {
   return (
     <button
@@ -1131,7 +1228,7 @@ function Primary({
       }}
       className="flex h-12 w-full items-center justify-center gap-2 rounded-[20px] bg-fg font-medium text-bg active:scale-[0.98]"
     >
-      <Play className="size-4" />
+      {icon ? <Play className="size-4" /> : null}
       {children}
     </button>
   );
