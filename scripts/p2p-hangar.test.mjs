@@ -19,9 +19,9 @@ const P2P = readFileSync(join(ROOT, "src/lib/multiplayer/p2p.ts"), "utf8");
 test("hangar title has a room code plus Host and Join", () => {
   assert.match(HUD, /P2PRoom/);
   assert.match(HUD, /createPagesSignal|pagesSignal|PagesSignal/);
-  assert.match(HUD, />\s*Host\s*</);
-  assert.match(HUD, />\s*Join\s*</);
-  assert.match(HUD, /[Rr]oom code/);
+  assert.match(HUD, /t\("host"\)/);
+  assert.match(HUD, /t\("join"\)/);
+  assert.match(HUD, /t\("roomCode"\)/);
 });
 
 test("P2PRoom keeps the WebRTC mesh and accepts a signal transport", () => {
