@@ -19,7 +19,7 @@ Game sim, physics, and art are not changed. Leftover better-auth / pglite / logi
 ## App identity
 
 - **Name:** Alien Attack Saucer
-- **Package / bundle id:** `com.menearz.saucerraid`
+- **Package / bundle id:** `com.saucerraid.alienattacksaucer`
 
 ## Icon slot (Spectre)
 
@@ -69,7 +69,7 @@ You do **not** need a Mac.
 3. First open: let Gradle sync. Accept any SDK / build-tools prompts.
 4. Run on an emulator or a USB phone to play-test.
 5. For Play: **Build → Generate Signed App Bundle / APK → Android App Bundle**.
-6. Upload the `.aab` in [Play Console](https://play.google.com/console). Package id must stay `com.menearz.saucerraid`.
+6. Upload the `.aab` in [Play Console](https://play.google.com/console). Package id must stay `com.saucerraid.alienattacksaucer`.
 
 Signing keys stay on Chief’s machine. This repo does not ship a keystore.
 

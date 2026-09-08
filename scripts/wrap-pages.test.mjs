@@ -26,7 +26,7 @@ test("wrap build uses root base and dist, not the Pages path", () => {
   assert.doesNotMatch(wrap, /base:\s*"\/saucer-raid\/"/);
   assert.match(wrap, /pwa:\s*false/);
   assert.doesNotMatch(wrap, /VitePWA/);
-  assert.match(cap, /appId:\s*"com\.menearz\.saucerraid"/);
+  assert.match(cap, /appId:\s*"com\.saucerraid\.alienattacksaucer"/);
   assert.match(cap, /appName:\s*"Alien Attack Saucer"/);
   assert.match(cap, /webDir:\s*"dist"/);
 });
@@ -36,7 +36,9 @@ test("native wrap projects exist with the store package id", () => {
   const strings = read("android/app/src/main/res/values/strings.xml");
   const pbx = read("ios/App/App.xcodeproj/project.pbxproj");
   const plist = read("ios/App/App/Info.plist");
-  assert.match(gradle, /applicationId "com\.menearz\.saucerraid"/);
+  assert.match(gradle, /applicationId "com\.saucerraid\.alienattacksaucer"/);
+  assert.match(gradle, /versionCode 2/);
+  assert.match(gradle, /versionName "1\.1"/);
   assert.match(strings, /<string name="app_name">Alien Attack Saucer<\/string>/);
   assert.match(pbx, /PRODUCT_BUNDLE_IDENTIFIER = com\.menearz\.saucerraid;/);
   assert.match(plist, /<string>Alien Attack Saucer<\/string>/);
