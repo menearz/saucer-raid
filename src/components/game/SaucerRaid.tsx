@@ -779,7 +779,7 @@ function ShoutLayer({
   return (
     <div className="pointer-events-none absolute inset-x-0 z-[25] flex justify-center px-3 bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] landscape:bottom-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]">
       <div
-        className="flex w-fit max-w-[min(92vw,28rem)] items-center justify-center rounded-xl border border-white/20 bg-black/80 px-3.5 py-2 text-center text-sm font-semibold leading-snug text-white backdrop-blur-sm sm:text-base"
+        className="flex w-fit max-w-[min(92vw,28rem)] items-center justify-center rounded-xl border border-white/20 bg-black/80 px-3.5 py-2 text-center text-sm sm:text-base font-semibold leading-snug text-white backdrop-blur-sm"
         style={{ opacity: 0.95, textShadow: "0 1px 2px #000, 0 0 8px #000" }}
       >
         <span>{view.text}</span>

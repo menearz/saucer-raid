@@ -24,14 +24,24 @@ test("ShoutLayer is single caption slot, not world multi-pill map", () => {
   assert.doesNotMatch(layer, /border-fg\/15/);
   assert.doesNotMatch(layer, /bg-surface\/90/);
   assert.doesNotMatch(layer, /text-\[11px\]/);
+  assert.doesNotMatch(layer, /left:\s*s\.x/);
+  assert.doesNotMatch(layer, /opacity:\s*Math\.max\(0\.15/);
   assert.match(layer, /bg-black\/80/);
+  assert.match(layer, /backdrop-blur-sm/);
   assert.match(layer, /border-white\/20/);
   assert.match(layer, /text-white/);
+  assert.doesNotMatch(layer, /text-muted|text-faint/);
+  assert.match(layer, /text-sm sm:text-base font-semibold leading-snug/);
+  assert.match(layer, /max-w-\[min\(92vw,28rem\)\]/);
+  assert.match(layer, /px-3\.5 py-2/);
   assert.match(layer, /rounded-xl/);
-  assert.match(layer, /textShadow/);
+  assert.match(layer, /0 1px 2px #000, 0 0 8px #000/);
+  assert.match(layer, /opacity:\s*0\.95/);
   assert.match(layer, /z-\[25\]|z-25/);
-  assert.match(layer, /safe-area-inset-bottom/);
+  assert.match(layer, /bottom-\[max\(6\.5rem/);
+  assert.match(layer, /view\.pending/);
   assert.match(layer, /syncCaptionEngine|createCaptionEngine/);
+  assert.match(layer, /if \(!view\.text\) return null/);
 });
 
 test("score and loot strings stay out of dialogue caption", () => {
@@ -39,6 +49,8 @@ test("score and loot strings stay out of dialogue caption", () => {
   assert.equal(isDialogueCaption("×3"), false);
   assert.equal(isDialogueCaption("WEAPON CACHE"), false);
   assert.equal(isDialogueCaption("CLOAK"), false);
+  assert.equal(isDialogueCaption("Laser+"), false);
+  assert.equal(isDialogueCaption("Twin"), false);
   assert.equal(isDialogueCaption("AHH NOT AGAIN"), true);
   assert.equal(isDialogueCaption("Hey buddy, what are you doing here?"), true);
 });
