@@ -37,6 +37,11 @@ import {
 } from "@/game/i18n";
 import { ALERTS } from "@/game/types";
 import { createWorld, loadBest } from "@/game/world";
+import {
+  captionView,
+  createCaptionEngine,
+  syncCaptionEngine,
+} from "./shout-caption";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -742,17 +747,48 @@ function ShoutLayer({
 }: {
   shouts: { id: number; text: string; x: number; y: number; life: number; max: number }[];
 }) {
+  const engineRef = useRef(createCaptionEngine());
+  const shoutsRef = useRef(shouts);
+  shoutsRef.current = shouts;
+  const [view, setView] = useState(() => captionView(createCaptionEngine()));
+
+  useEffect(() => {
+    const now =
+      (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
+    const next = syncCaptionEngine(engineRef.current, shouts, now);
+    setView((prev) =>
+      prev.text === next.text && prev.pending === next.pending ? prev : next,
+    );
+  }, [shouts]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const engine = engineRef.current;
+      const now = performance.now() / 1000;
+      syncCaptionEngine(engine, shoutsRef.current, now);
+      const next = captionView(engine);
+      setView((prev) =>
+        prev.text === next.text && prev.pending === next.pending ? prev : next,
+      );
+    }, 80);
+    return () => window.clearInterval(id);
+  }, []);
+
+  if (!view.text) return null;
+
   return (
-    <div className="pointer-events-none absolute inset-0 z-15">
-      {shouts.map((s, i) => (
-        <div
-          key={`${s.id}-${s.text}-${i}`}
-          className="absolute -translate-x-1/2 -translate-y-full rounded-full border border-fg/15 bg-surface/90 px-2.5 py-1 text-[11px] font-medium text-fg shadow-md"
-          style={{ left: s.x, top: s.y, opacity: Math.max(0.15, s.life / s.max) }}
-        >
-          {s.text}
-        </div>
-      ))}
+    <div className="pointer-events-none absolute inset-x-0 z-[25] flex justify-center px-3 bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] landscape:bottom-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]">
+      <div
+        className="flex w-fit max-w-[min(92vw,28rem)] items-center justify-center rounded-xl border border-white/20 bg-black/80 px-3.5 py-2 text-center text-sm font-semibold leading-snug text-white backdrop-blur-sm sm:text-base"
+        style={{ opacity: 0.95, textShadow: "0 1px 2px #000, 0 0 8px #000" }}
+      >
+        <span>{view.text}</span>
+        {view.pending > 0 ? (
+          <span className="ml-2 shrink-0 text-[10px] font-medium text-white/45 tabular-nums">
+            {view.pending > 3 ? "· · ·" : view.pending}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
