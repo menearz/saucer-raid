@@ -1,7 +1,7 @@
 import { COLS, ROWS, WORLD_H, WORLD_W, type Actor, type Kind } from "./types.ts";
 
 export const BOSS_SCORE_BONUS = 1800;
-export const BOSS_SALVAGE = 8;
+export const BOSS_SALVAGE = 3;
 export const BOSS_HELLO = "Hey buddy, what are you doing here?";
 export const BOSS_REPLY = "I'm not your buddy, pal.";
 export const BOSS_FIGHT = "(fight)";

@@ -136,7 +136,7 @@ test("rival boss uses an existing original hull sprite, not military or a knocko
     assert.ok(boss.r > 30);
   }
   assert.ok(BOSS_SCORE_BONUS >= 1200);
-  assert.ok(BOSS_SALVAGE >= 6);
+  assert.equal(BOSS_SALVAGE, 3);
 });
 
 const PLAYER_SPRITES = [
@@ -199,6 +199,20 @@ test("hello scene plays the three lines, then combat; boss is invuln during talk
   assert.match(SIM, /bossTalk >= BOSS_COMBAT/);
   assert.match(WORLD, /bossTalk = 0/);
   assert.match(WORLD, /BOSS_COMBAT/);
+});
+
+test("boss cutscene hard-locks input, ignores pause, soft-freezes combat", () => {
+  assert.match(SIM, /const cutscene = w\.bossTalk < BOSS_COMBAT/);
+  assert.match(SIM, /wantBeam = cutscene \? false : input\.beam/);
+  assert.match(SIM, /wantFire = cutscene \? false : input\.fire/);
+  assert.match(SIM, /audio\.stopBeam/);
+  assert.match(SIM, /if \(!cutscene\)[\s\S]*timeLeft -= dt/);
+  assert.match(SIM, /hurtPlayer[\s\S]*bossTalk < BOSS_COMBAT/);
+  assert.match(SIM, /if \(cutscene\)[\s\S]*continue/);
+  assert.match(SIM, /!cutscene && a\.fireCd <= 0/);
+  assert.match(LOOP, /BOSS_COMBAT/);
+  assert.match(LOOP, /bossTalk < BOSS_COMBAT/);
+  assert.match(LOOP, /justPause && !cutscene/);
 });
 
 test("hangar keeps the six original hull names", () => {

@@ -1,12 +1,18 @@
-import type { Alert } from "./types";
+import type { Alert } from "./types.ts";
+import type { CraftId } from "./crafts.ts";
+import { loadCraftId } from "./crafts.ts";
 
 export type UpgradeId = "engines" | "tractor" | "armor" | "shields" | "weapons";
+
+export type UpgradeRanks = Record<UpgradeId, number>;
 
 export type Progress = {
   level: number;
   salvage: number;
   runScore: number;
-  upgrades: Record<UpgradeId, number>;
+  /** Mirror of selected craft ranks (compat); prefer ranksFor. */
+  upgrades: UpgradeRanks;
+  upgradesByCraft: Partial<Record<CraftId, UpgradeRanks>>;
 };
 
 export const UPGRADES: {
@@ -24,12 +30,43 @@ export const UPGRADES: {
 
 const KEY = "saucer-raid-progress";
 
+export function emptyRanks(): UpgradeRanks {
+  return { engines: 0, tractor: 0, armor: 0, shields: 0, weapons: 0 };
+}
+
 export function emptyProgress(): Progress {
   return {
     level: 1,
     salvage: 0,
     runScore: 0,
-    upgrades: { engines: 0, tractor: 0, armor: 0, shields: 0, weapons: 0 },
+    upgrades: emptyRanks(),
+    upgradesByCraft: {},
+  };
+}
+
+export function ranksFor(p: Progress, craftId: CraftId): UpgradeRanks {
+  return { ...emptyRanks(), ...(p.upgradesByCraft[craftId] ?? {}) };
+}
+
+/** Normalize saved progress: migrate legacy flat upgrades onto current craft only. */
+export function normalizeProgress(raw: Partial<Progress> & { upgrades?: UpgradeRanks }): Progress {
+  const base = emptyProgress();
+  const craftId = loadCraftId();
+  let byCraft: Partial<Record<CraftId, UpgradeRanks>> = {};
+  if (raw.upgradesByCraft && typeof raw.upgradesByCraft === "object") {
+    for (const [k, v] of Object.entries(raw.upgradesByCraft)) {
+      if (v && typeof v === "object") byCraft[k as CraftId] = { ...emptyRanks(), ...v };
+    }
+  } else if (raw.upgrades && typeof raw.upgrades === "object") {
+    byCraft = { [craftId]: { ...emptyRanks(), ...raw.upgrades } };
+  }
+  const selected = ranksFor({ ...base, upgradesByCraft: byCraft }, craftId);
+  return {
+    level: Math.max(1, raw.level || 1),
+    salvage: Math.max(0, raw.salvage || 0),
+    runScore: Math.max(0, raw.runScore || 0),
+    upgrades: selected,
+    upgradesByCraft: byCraft,
   };
 }
 
@@ -37,14 +74,7 @@ export function loadProgress(): Progress {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return emptyProgress();
-    const p = JSON.parse(raw) as Progress;
-    const base = emptyProgress();
-    return {
-      level: Math.max(1, p.level || 1),
-      salvage: Math.max(0, p.salvage || 0),
-      runScore: Math.max(0, p.runScore || 0),
-      upgrades: { ...base.upgrades, ...p.upgrades },
-    };
+    return normalizeProgress(JSON.parse(raw) as Progress);
   } catch {
     return emptyProgress();
   }
@@ -65,26 +95,33 @@ export function resetProgress() {
 }
 
 export function upgradeCost(rank: number) {
-  return 3 + rank * 3;
+  return 8 + rank * 8;
 }
 
-export function buyUpgrade(p: Progress, id: UpgradeId): Progress {
+export function buyUpgrade(p: Progress, craftId: CraftId, id: UpgradeId): Progress {
   const spec = UPGRADES.find((u) => u.id === id)!;
-  const rank = p.upgrades[id] ?? 0;
+  const ranks = ranksFor(p, craftId);
+  const rank = ranks[id] ?? 0;
   if (rank >= spec.max) return p;
   const cost = upgradeCost(rank);
   if (p.salvage < cost) return p;
-  const next = {
+  const nextRanks = { ...ranks, [id]: rank + 1 };
+  const selected = loadCraftId();
+  const next: Progress = {
     ...p,
     salvage: p.salvage - cost,
-    upgrades: { ...p.upgrades, [id]: rank + 1 },
+    upgradesByCraft: { ...p.upgradesByCraft, [craftId]: nextRanks },
+    upgrades: craftId === selected ? nextRanks : ranksFor(p, selected),
   };
+  if (craftId !== selected) {
+    next.upgrades = ranksFor(next, selected);
+  }
   saveProgress(next);
   return next;
 }
 
 export function awardSalvage(p: Progress, score: number, survived: boolean): Progress {
-  const gained = Math.max(2, Math.floor(score / 70) + (survived ? 6 : 2));
+  const gained = Math.max(2, Math.floor(score / 180) + (survived ? 6 : 2));
   const next = {
     ...p,
     salvage: p.salvage + gained,

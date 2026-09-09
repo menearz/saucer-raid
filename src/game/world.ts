@@ -13,7 +13,7 @@ import {
   type Shout,
 } from "./types";
 import { getCraft } from "./crafts";
-import { loadProgress } from "./progress";
+import { loadProgress, ranksFor } from "./progress";
 import {
   BOSS_COMBAT,
   BOSS_HELLO,
@@ -276,7 +276,7 @@ export function createWorld(): World {
   }
 
   const craft = getCraft();
-  const u = prog.upgrades;
+  const u = ranksFor(prog, craft.id);
   const hp = craft.hp + u.armor;
   const speed = craft.speed * (1 + u.engines * 0.12);
   const beam = craft.beam * (1 + u.tractor * 0.08);

@@ -10,7 +10,7 @@ import {
 import { wingmanWaitMessage } from "@/lib/multiplayer/wingman-status";
 import { audio } from "@/game/audio";
 import { loadArt } from "@/game/assets";
-import { CRAFTS, cycleCraftId, saveCraftId, type Craft, type CraftId } from "@/game/crafts";
+import { CRAFTS, cycleCraftId, loadCraftId, saveCraftId, type Craft, type CraftId } from "@/game/crafts";
 import { haptics } from "@/game/haptics";
 import { Input } from "@/game/input";
 import type { GameHandle } from "@/game/loop";
@@ -20,6 +20,7 @@ import {
   UPGRADES,
   buyUpgrade,
   loadProgress,
+  ranksFor,
   resetProgress,
   upgradeCost,
   type MapMark,
@@ -913,9 +914,11 @@ function UpgradeBay({
   const t = useT();
   const [tick, setTick] = useState(0);
   const p = loadProgress();
+  const craftId = loadCraftId();
+  const ranks = ranksFor(p, craftId);
   const survived = hud.reason === "time";
   const buy = (id: UpgradeId) => {
-    buyUpgrade(loadProgress(), id);
+    buyUpgrade(loadProgress(), craftId, id);
     useHud.setState({ salvage: loadProgress().salvage });
     audio.upgrade();
     setTick((n) => n + 1);
@@ -938,7 +941,7 @@ function UpgradeBay({
       </p>
       <ul className="mt-4 space-y-2">
         {UPGRADES.map((u) => {
-          const rank = p.upgrades[u.id] ?? 0;
+          const rank = ranks[u.id] ?? 0;
           const cost = upgradeCost(rank);
           const maxed = rank >= u.max;
           const poor = p.salvage < cost;
