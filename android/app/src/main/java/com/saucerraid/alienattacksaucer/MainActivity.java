@@ -1,4 +1,4 @@
-package com.menearz.saucerraid;
+package com.saucerraid.alienattacksaucer;
 
 import com.getcapacitor.BridgeActivity;
 
