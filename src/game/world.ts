@@ -16,7 +16,6 @@ import { getCraft } from "./crafts";
 import { loadProgress, ranksFor } from "./progress";
 import {
   BOSS_COMBAT,
-  BOSS_HELLO,
   bossHome,
   buildTerrain,
   isBossSector,
@@ -298,8 +297,6 @@ export function createWorld(): World {
     const home = bossHome(level);
     const boss = makeBossActor(level, home.x, home.y, id(), craft.sprite);
     actors.push(boss);
-    shouts.push({ id: boss.id, text: BOSS_HELLO, x: boss.x, y: boss.y, life: 2.6, max: 2.6 });
-    popups.push({ x: boss.x, y: boss.y - 36, text: BOSS_HELLO, life: 2.4, max: 2.4 });
     bossTalk = 0;
   }
   const bossTalkT = 0;

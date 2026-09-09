@@ -201,6 +201,24 @@ test("hello scene plays the three lines, then combat; boss is invuln during talk
   assert.match(WORLD, /BOSS_COMBAT/);
 });
 
+test("dialogue uses pushDialogue only; score/loot stay on popup; boss life <= beat wait", () => {
+  assert.match(SIM, /function pushDialogue\(/);
+  assert.match(SIM, /w\.shouts\.length = 0/);
+  assert.match(SIM, /pushDialogue\(w, a\.id, line, a\.x, a\.y, 1\.8\)/);
+  assert.match(SIM, /pushDialogue\(w, boss\.id, BOSS_HELLO, boss\.x, boss\.y, 2\.35\)/);
+  assert.match(SIM, /pushDialogue\(w, w\.saucer\.id, BOSS_REPLY, w\.saucer\.x, w\.saucer\.y, 2\.15\)/);
+  assert.match(SIM, /pushDialogue\(w, boss\.id, BOSS_FIGHT, boss\.x, boss\.y, 1\.1\)/);
+  assert.match(SIM, /pushDialogue\(w, w\.saucer\.id, BOSS_STING, w\.saucer\.x, w\.saucer\.y, 2\.0\)/);
+  assert.doesNotMatch(SIM, /popup\([^)]*BOSS_STING/);
+  assert.doesNotMatch(SIM, /popup\([^)]*BOSS_REPLY/);
+  assert.doesNotMatch(SIM, /popup\([^)]*BOSS_FIGHT/);
+  assert.doesNotMatch(SIM, /popup\([^)]*line\)/);
+  assert.doesNotMatch(WORLD, /BOSS_HELLO/);
+  assert.doesNotMatch(WORLD, /popups\.push\([^)]*BOSS_/);
+  assert.match(SIM, /popup\(w, x, y - 20,/);
+  assert.match(SIM, /popup\(w, a\.x, a\.y - 24, loot/);
+});
+
 test("boss cutscene hard-locks input, ignores pause, soft-freezes combat", () => {
   assert.match(SIM, /const cutscene = w\.bossTalk < BOSS_COMBAT/);
   assert.match(SIM, /wantBeam = cutscene \? false : input\.beam/);

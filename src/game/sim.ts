@@ -90,6 +90,12 @@ function popup(w: World, x: number, y: number, text: string) {
   w.popups.push({ x, y, text, life: 0.9, max: 0.9 });
 }
 
+function pushDialogue(w: World, id: number, text: string, x: number, y: number, life: number) {
+  w.shouts = w.shouts.filter((s) => s.life <= 0);
+  w.shouts.length = 0;
+  w.shouts.push({ id, text, x, y, life, max: life });
+}
+
 function addScore(w: World, amount: number, x: number, y: number) {
   const st = w.state;
   if (st.comboTimer > 0) st.combo += 1;
@@ -436,8 +442,7 @@ function shoutHuman(w: World, a: Actor) {
   const n = typeof a.shouted === "number" ? a.shouted : a.shouted ? 1 : 0;
   a.shouted = n + 1;
   const line = pickHumanLine(n);
-  w.shouts.push({ id: a.id, text: line, x: a.x, y: a.y, life: 1.8, max: 1.8 });
-  popup(w, a.x, a.y - 28, line);
+  pushDialogue(w, a.id, line, a.x, a.y, 1.8);
   const roll = Math.random();
   if (roll < 0.34) audio.scream();
   else if (roll < 0.67) audio.cry();
@@ -447,15 +452,7 @@ function shoutHuman(w: World, a: Actor) {
 
 function stingBoss(w: World, a: Actor) {
   addScore(w, BOSS_SCORE_BONUS, a.x, a.y);
-  popup(w, a.x, a.y - 48, BOSS_STING);
-  w.shouts.push({
-    id: w.saucer.id,
-    text: BOSS_STING,
-    x: w.saucer.x,
-    y: w.saucer.y,
-    life: 2.4,
-    max: 2.4,
-  });
+  pushDialogue(w, w.saucer.id, BOSS_STING, w.saucer.x, w.saucer.y, 2.0);
   const p = loadProgress();
   p.salvage += BOSS_SALVAGE;
   saveProgress(p);
@@ -470,34 +467,18 @@ function stepBossTalk(w: World, dt: number) {
   }
   if (w.bossTalk === 0) {
     if (w.bossTalkT <= 0 && !w.shouts.some((s) => s.text === BOSS_HELLO)) {
-      w.shouts.push({ id: boss.id, text: BOSS_HELLO, x: boss.x, y: boss.y, life: 2.6, max: 2.6 });
+      pushDialogue(w, boss.id, BOSS_HELLO, boss.x, boss.y, 2.35);
     }
     w.bossTalkT += dt;
     if (w.bossTalkT >= BOSS_HELLO_WAIT) {
-      w.shouts.push({
-        id: w.saucer.id,
-        text: BOSS_REPLY,
-        x: w.saucer.x,
-        y: w.saucer.y,
-        life: 2.4,
-        max: 2.4,
-      });
-      popup(w, w.saucer.x, w.saucer.y - 36, BOSS_REPLY);
+      pushDialogue(w, w.saucer.id, BOSS_REPLY, w.saucer.x, w.saucer.y, 2.15);
       w.bossTalk = 1;
       w.bossTalkT = 0;
     }
   } else if (w.bossTalk === 1) {
     w.bossTalkT += dt;
     if (w.bossTalkT >= BOSS_REPLY_WAIT) {
-      w.shouts.push({
-        id: boss.id,
-        text: BOSS_FIGHT,
-        x: boss.x,
-        y: boss.y,
-        life: 2.0,
-        max: 2.0,
-      });
-      popup(w, boss.x, boss.y - 36, BOSS_FIGHT);
+      pushDialogue(w, boss.id, BOSS_FIGHT, boss.x, boss.y, 1.1);
       w.bossTalk = 2;
       w.bossTalkT = 0;
     }
