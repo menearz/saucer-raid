@@ -6,6 +6,7 @@ import { smashNearestSpecial, startRaid, step, screenToWorld, worldToScreen } fr
 import { patchHud } from "./store";
 import { loadBest, type World } from "./world";
 import { loadProgress, type MapMark } from "./progress";
+import { BOSS_COMBAT } from "./raid-content";
 import { WORLD_H, WORLD_W } from "./types";
 
 const STEP = 1 / 60;
@@ -148,7 +149,8 @@ export function runGame(
       }
     }
 
-    if (world.state.phase === "playing" && input.justPause) {
+    const cutscene = world.bossTalk < BOSS_COMBAT;
+    if (world.state.phase === "playing" && input.justPause && !cutscene) {
       world.state.phase = "paused";
       audio.stopBeam();
       flushHud();

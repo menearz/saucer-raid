@@ -511,6 +511,7 @@ function stepBossTalk(w: World, dt: number) {
 }
 
 function hurtPlayer(w: World, dmg = 1) {
+  if (w.bossTalk < BOSS_COMBAT) return;
   if (w.saucer.flash > 0) return;
   if ((w.state.shield ?? 0) > 0) {
     w.state.shield = Math.max(0, w.state.shield - dmg);
@@ -565,16 +566,20 @@ export function step(w: World, input: Actions, dt: number) {
   const st = w.state;
   if (st.phase !== "playing") return;
 
+  const cutscene = w.bossTalk < BOSS_COMBAT;
+
   w.time += dt;
-  st.timeLeft -= dt;
-  if (st.timeLeft <= 0) {
-    st.timeLeft = 0;
-    st.phase = "upgrade";
-    st.reason = "time";
-    saveBest(st.score);
-    awardSalvage(loadProgress(), st.score, true);
-    haptics.gameOver();
-    return;
+  if (!cutscene) {
+    st.timeLeft -= dt;
+    if (st.timeLeft <= 0) {
+      st.timeLeft = 0;
+      st.phase = "upgrade";
+      st.reason = "time";
+      saveBest(st.score);
+      awardSalvage(loadProgress(), st.score, true);
+      haptics.gameOver();
+      return;
+    }
   }
 
   stepBossTalk(w, dt);
@@ -591,9 +596,11 @@ export function step(w: World, input: Actions, dt: number) {
   }
 
   const s = w.saucer;
-  const ax = input.moveX;
-  const ay = input.moveY;
-  const speed = (st.speed || 330) * (input.beam ? 0.72 : 1);
+  const ax = cutscene ? 0 : input.moveX;
+  const ay = cutscene ? 0 : input.moveY;
+  const wantBeam = cutscene ? false : input.beam;
+  const wantFire = cutscene ? false : input.fire;
+  const speed = (st.speed || 330) * (wantBeam ? 0.72 : 1);
   const tx = ax * speed;
   const ty = ay * speed;
   s.vx += (tx - s.vx) * (1 - Math.exp(-10 * dt));
@@ -615,11 +622,11 @@ export function step(w: World, input: Actions, dt: number) {
   if (ax < -0.2) w.qaYaw += 2.4 * dt;
   if (ax > 0.2) w.qaYaw -= 2.4 * dt;
 
-  let aimX = input.aimX;
-  let aimY = input.aimY;
+  let aimX = cutscene ? 0 : input.aimX;
+  let aimY = cutscene ? 0 : input.aimY;
   if (Math.hypot(aimX, aimY) < 0.15) {
     const target = nearestTarget(w, s);
-    if (target && input.fire) {
+    if (target && wantFire) {
       aimX = target.x - s.x;
       aimY = target.y - s.y;
     } else if (Math.hypot(s.vx, s.vy) > 20) {
@@ -634,14 +641,14 @@ export function step(w: World, input: Actions, dt: number) {
   w.aimX = aimX / al;
   w.aimY = aimY / al;
 
-  w.beamOn = input.beam;
-  if (input.beam) {
+  w.beamOn = wantBeam;
+  if (wantBeam) {
     audio.startBeam();
     haptics.beam();
   } else audio.stopBeam();
 
   w.fireCd = Math.max(0, w.fireCd - dt);
-  if (input.fire && w.fireCd <= 0) {
+  if (wantFire && w.fireCd <= 0) {
     spawnLaser(w, w.aimX, w.aimY);
     const rate = st.fireRate || 0.085;
     const haste = 1 - Math.min(0.4, (st.weaponTier ?? 0) * 0.1);
@@ -673,7 +680,7 @@ export function step(w: World, input: Actions, dt: number) {
     w.planeCd = want.planeCd;
   }
 
-  const beam = input.beam;
+  const beam = wantBeam;
 
   for (const a of w.actors) {
     if (a.dead) continue;
@@ -761,7 +768,7 @@ export function step(w: World, input: Actions, dt: number) {
         a.vy += ((jy / jl) * spd - a.vy) * (1 - Math.exp(-5 * dt));
         a.facing = Math.atan2(a.vy, a.vx);
         const range = a.kind === "tank" ? 580 : 520;
-        if (a.fireCd <= 0 && jl < range) {
+        if (!cutscene && a.fireCd <= 0 && jl < range) {
           a.fireCd = a.kind === "tank" ? 1.85 : 1.15;
           spawnShot(w, a.x, a.y, jx, jy, a.kind === "tank" ? 210 : 280, a.kind === "tank" ? 2 : 1);
           if (a.kind === "tank") audio.tank();
@@ -776,7 +783,7 @@ export function step(w: World, input: Actions, dt: number) {
       a.vy += ((oy / ol) * 190 - a.vy) * (1 - Math.exp(-4 * dt));
       a.facing = Math.atan2(s.y - a.y, s.x - a.x);
       const jl = Math.hypot(s.x - a.x, s.y - a.y);
-      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && jl < 480) {
+      if (!cutscene && (st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && jl < 480) {
         a.fireCd = 0.72;
         spawnShot(w, a.x, a.y, s.x - a.x, s.y - a.y, 300, 1, 1.6);
         audio.heli();
@@ -787,7 +794,7 @@ export function step(w: World, input: Actions, dt: number) {
       a.vy = Math.sin(hd) * 340;
       a.facing = hd;
       a.wanderT -= dt;
-      if ((st.cloakT ?? 0) <= 0 && a.fireCd <= 0) {
+      if (!cutscene && (st.cloakT ?? 0) <= 0 && a.fireCd <= 0) {
         a.fireCd = 0.38;
         spawnShot(w, a.x, a.y, Math.cos(hd), Math.sin(hd), 420, 1, 1.1);
         audio.jet();
@@ -877,6 +884,9 @@ export function step(w: World, input: Actions, dt: number) {
     }
     if (sweptHit(x0, y0, b.x, b.y, s.x, s.y, s.r + 8)) {
       b.dead = true;
+      if (cutscene) {
+        continue;
+      }
       if ((st.cloakT ?? 0) > 0) {
         burst(w, b.x, b.y, 5, "#c9a0ff", 70);
         continue;
