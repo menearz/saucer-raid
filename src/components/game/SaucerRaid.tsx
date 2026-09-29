@@ -254,27 +254,31 @@ function TitleScreen({
         className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_30%] landscape:object-center"
       />
       <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-bg/62 via-bg/70 to-bg/95 landscape:bg-linear-to-r landscape:from-bg/94 landscape:via-bg/72 landscape:to-bg/58" />
-      <header className="relative z-10 flex items-center justify-end px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))]">
-        {!showAccount ? null : isPending ? (
-          <div className="h-8 w-24 animate-pulse rounded-full bg-fg/10" />
-        ) : hasUser ? (
-          <SignedIn>
-            <div className="rounded-full border border-border bg-surface/80 px-3 py-1 text-xs">
-              <UserButton />
-            </div>
-          </SignedIn>
-        ) : (
-          <SignedOut>
-            <Link
-              to="/login"
-              className="rounded-full border border-border bg-surface/80 px-4 py-2 text-sm text-fg"
-            >
-              {t("signIn")}
-            </Link>
-          </SignedOut>
-        )}
-      </header>
-      <div className="relative z-10 flex flex-1 flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] landscape:flex-row landscape:items-center landscape:gap-6 landscape:px-8">
+      {showAccount ? (
+        <header className="relative z-10 flex items-center justify-end px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))]">
+          {isPending ? (
+            <div className="h-8 w-24 animate-pulse rounded-full bg-fg/10" />
+          ) : hasUser ? (
+            <SignedIn>
+              <div className="rounded-full border border-border bg-surface/80 px-3 py-1 text-xs">
+                <UserButton />
+              </div>
+            </SignedIn>
+          ) : (
+            <SignedOut>
+              <Link
+                to="/login"
+                className="rounded-full border border-border bg-surface/80 px-4 py-2 text-sm text-fg"
+              >
+                {t("signIn")}
+              </Link>
+            </SignedOut>
+          )}
+        </header>
+      ) : (
+        <div className="h-[max(0.5rem,env(safe-area-inset-top))] shrink-0" />
+      )}
+      <div className="relative z-10 flex flex-1 flex-col px-5 pb-1 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] landscape:flex-row landscape:items-center landscape:gap-6 landscape:px-8 landscape:pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <div className="landscape:w-[min(26rem,42%)] landscape:shrink-0">
           <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-accent">
             {t("sector", { n: level })}
@@ -300,12 +304,19 @@ function TitleScreen({
         </div>
         <HangarPreview />
         <div className="landscape:hidden">
-          <HangarInfo />
-          <LaunchButton ready={ready} onStart={onStart} />
+          <HangarInfo part="identity" />
+        </div>
+      </div>
+      <div className="sticky bottom-0 z-30 shrink-0 landscape:hidden">
+        <div className="bg-bg/90 px-5 pt-2 backdrop-blur-sm pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]">
+          <LaunchButton ready={ready} onStart={onStart} flush />
           {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
         </div>
       </div>
       <div className="relative z-10 w-full max-w-xs shrink-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
+        <div className="landscape:hidden">
+          <HangarInfo part="stats" />
+        </div>
         <NetBay />
         <LangSwitch />
       </div>
@@ -319,7 +330,7 @@ function HangarWordmark({ wrap }: { wrap: boolean }) {
   return (
     <h1
       aria-label={name}
-      className="font-display text-5xl leading-[0.85] tracking-tight sm:text-6xl landscape:text-5xl"
+      className="font-display text-4xl leading-[0.85] tracking-tight sm:text-6xl landscape:text-5xl"
     >
       {wrap ? t("wrapTitleL1") : t("siteTitleL1")}
       <br />
@@ -331,10 +342,15 @@ function HangarWordmark({ wrap }: { wrap: boolean }) {
 function HangarPitch() {
   const t = useT();
   return (
-    <div className="mt-2 max-w-sm space-y-1 landscape:mt-1.5">
+    <div className="mt-1.5 max-w-sm space-y-1 landscape:mt-1.5">
       <p className="text-sm font-medium leading-snug text-fg">{t("pitchLead")}</p>
-      <p className="text-xs leading-snug text-muted sm:text-sm">{t("pitchFly")}</p>
-      <p className="text-xs leading-snug text-muted sm:text-sm">{t("pitchControls")}</p>
+      <p className="line-clamp-1 text-xs leading-snug text-muted landscape:hidden">
+        {t("pitchFly")} {t("pitchControls")}
+      </p>
+      <p className="hidden text-xs leading-snug text-muted landscape:block sm:text-sm">{t("pitchFly")}</p>
+      <p className="hidden text-xs leading-snug text-muted landscape:block sm:text-sm">
+        {t("pitchControls")}
+      </p>
     </div>
   );
 }
@@ -357,7 +373,7 @@ function HangarPreview() {
   const src = assetUrl(`/game/${craft.portrait}.png`);
   const t = useT();
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-2 landscape:py-0">
+    <div className="flex min-h-0 w-full flex-none flex-col items-center justify-center py-1 landscape:flex-1 landscape:py-0">
       <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
         {t("hangar")}
       </p>
@@ -388,7 +404,7 @@ function HangarPreview() {
         >
           <ChevronLeft className="size-5" />
         </button>
-        <div className="relative mx-1 flex h-[min(42dvh,20rem)] w-full items-center justify-center landscape:h-[min(62dvh,26rem)]">
+        <div className="relative mx-1 flex h-[min(26dvh,12rem)] w-full items-center justify-center landscape:h-[min(62dvh,26rem)]">
           <div className="pointer-events-none absolute inset-[12%] rounded-full bg-bg/75 blur-2xl" />
           <img
             key={craft.id}
@@ -410,7 +426,7 @@ function HangarPreview() {
           <ChevronRight className="size-5" />
         </button>
       </div>
-      <div className="mt-2 flex w-full max-w-md flex-wrap justify-center gap-1.5">
+      <div className="mt-1.5 flex w-full max-w-md flex-wrap justify-center gap-1.5">
         {CRAFTS.map((c) => {
           const on = craftId === c.id;
           return (
@@ -427,7 +443,7 @@ function HangarPreview() {
                 e.stopPropagation();
                 pickCraft(c.id);
               }}
-              className={`grid size-12 place-items-center overflow-hidden rounded-lg border bg-surface/80 p-0.5 landscape:size-14 ${
+              className={`grid size-10 place-items-center overflow-hidden rounded-lg border bg-surface/80 p-0.5 landscape:size-14 ${
                 on ? "border-accent bg-accent/15" : "border-border"
               }`}
             >
@@ -445,28 +461,47 @@ function HangarPreview() {
   );
 }
 
-function HangarInfo() {
+function HangarInfo({ part = "all" }: { part?: "all" | "identity" | "stats" }) {
   const craftId = useHud((s) => s.craftId);
   const craft = selectedCraft(craftId);
   const t = useT();
+  const showIdentity = part !== "stats";
+  const showStats = part !== "identity";
   return (
-    <div className="mt-3 max-w-sm landscape:mt-4">
-      <p className="text-[10px] uppercase tracking-widest text-accent">{craft.tag}</p>
-      <p className="font-display text-3xl leading-none tracking-tight landscape:text-4xl">
-        {craft.name}
-      </p>
-      <p className="mt-1 text-xs leading-snug text-muted">{craft.blurb}</p>
-      <div className="mt-3 space-y-1.5">
-        <StatBar label={t("statSpeed")} value={craft.speed} max={STAT_MAX.speed} />
-        <StatBar label={t("statHull")} value={craft.hp} max={STAT_MAX.hp} />
-        <StatBar label={t("statBeam")} value={craft.beam} max={STAT_MAX.beam} />
-        <StatBar label={t("statLaser")} value={craft.laser} max={STAT_MAX.laser} />
-        <StatBar
-          label={t("statCool")}
-          value={STAT_MAX.heat - craft.heatMult}
-          max={STAT_MAX.heat - STAT_MIN.heat}
-        />
-      </div>
+    <div
+      className={
+        part === "identity"
+          ? "mt-1 max-w-sm"
+          : part === "stats"
+            ? "mt-2 max-w-sm"
+            : "mt-3 max-w-sm landscape:mt-4"
+      }
+    >
+      {showIdentity && (
+        <>
+          <p className="text-[10px] uppercase tracking-widest text-accent">{craft.tag}</p>
+          <p className="font-display text-2xl leading-none tracking-tight landscape:text-4xl">
+            {craft.name}
+          </p>
+        </>
+      )}
+      {part === "all" && <p className="mt-1 text-xs leading-snug text-muted">{craft.blurb}</p>}
+      {part === "stats" && (
+        <p className="line-clamp-2 text-xs leading-snug text-muted">{craft.blurb}</p>
+      )}
+      {showStats && (
+        <div className={part === "all" ? "mt-3 space-y-1.5" : "mt-2 space-y-1"}>
+          <StatBar label={t("statSpeed")} value={craft.speed} max={STAT_MAX.speed} />
+          <StatBar label={t("statHull")} value={craft.hp} max={STAT_MAX.hp} />
+          <StatBar label={t("statBeam")} value={craft.beam} max={STAT_MAX.beam} />
+          <StatBar label={t("statLaser")} value={craft.laser} max={STAT_MAX.laser} />
+          <StatBar
+            label={t("statCool")}
+            value={STAT_MAX.heat - craft.heatMult}
+            max={STAT_MAX.heat - STAT_MIN.heat}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -487,7 +522,7 @@ function StatBar({ label, value, max }: { label: string; value: number; max: num
   const pct = Math.max(8, Math.min(100, Math.round((value / max) * 100)));
   return (
     <div className="flex items-center gap-2">
-      <span className="w-11 shrink-0 text-[9px] uppercase tracking-widest text-faint">
+      <span className="w-12 shrink-0 text-[10px] uppercase tracking-wide text-faint">
         {label}
       </span>
       <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
@@ -500,9 +535,11 @@ function StatBar({ label, value, max }: { label: string; value: number; max: num
 function LaunchButton({
   ready,
   onStart,
+  flush = false,
 }: {
   ready: boolean;
   onStart: () => void;
+  flush?: boolean;
 }) {
   const t = useT();
   return (
@@ -513,7 +550,7 @@ function LaunchButton({
         e.stopPropagation();
         if (ready) onStart();
       }}
-      className="mt-4 h-12 w-full max-w-xs rounded-[20px] bg-fg px-6 font-medium text-bg transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-50 landscape:mt-4"
+      className={`${flush ? "mt-0" : "mt-4"} h-12 w-full max-w-xs rounded-[20px] bg-fg px-6 font-medium text-bg transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-50`}
     >
       {ready ? t("launch") : t("loading")}
     </button>
@@ -822,72 +859,73 @@ function HudOverlay({
   const hot = hud.alert === "hostile" || hud.alert === "air-raid";
   const weaponKey = WEAPON_KEYS[Math.min(3, hud.weaponTier)] ?? "weaponLaser";
   const weapon = t(weaponKey);
+  const metaShadow = { textShadow: "0 1px 2px #000, 0 0 6px #000" };
+  const chip =
+    "inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide";
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-display text-4xl leading-none tabular-nums landscape:text-3xl">
-            {hud.score}
+      <div className="rounded-xl border border-white/10 bg-bg/75 px-2.5 py-2 backdrop-blur-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-4xl leading-none tabular-nums landscape:text-3xl">
+              {hud.score}
+            </p>
+            <p className="text-xs font-semibold text-fg" style={metaShadow}>
+              {t("sector", { n: hud.level })}
+            </p>
+            {hud.combo > 1 && (
+              <p className="text-xs font-semibold text-accent">{t("combo", { n: hud.combo })}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="font-display text-3xl leading-none tabular-nums landscape:text-2xl">
+              {m}:{s}
+            </p>
+            <p className="text-xs font-semibold text-fg" style={metaShadow}>
+              {t("takenWrecked", { a: hud.abducted, d: hud.destroyed })}
+            </p>
+          </div>
+        </div>
+        <div className="mt-2 flex items-center gap-2 landscape:mt-1">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+            <div
+              className={`h-full rounded-full transition-[width] duration-150 ${hot ? "bg-danger" : "bg-accent"}`}
+              style={{ width: `${Math.min(100, hud.heat)}%` }}
+            />
+          </div>
+          <div className="flex gap-1">
+            {Array.from({ length: hud.maxHp }).map((_, i) => (
+              <span
+                key={i}
+                className={`h-2 w-2 rounded-full ${i < hud.hp ? "bg-accent" : "bg-surface-2"}`}
+              />
+            ))}
+            {hud.shieldMax > 0 &&
+              Array.from({ length: Math.ceil(hud.shieldMax) }).map((_, i) => (
+                <span
+                  key={`s${i}`}
+                  className={`h-2 w-2 rounded-full ${i < hud.shield ? "bg-warn" : "bg-surface-2"}`}
+                />
+              ))}
+          </div>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <p
+            className={`${chip} opacity-100 ${
+              hot ? "border-danger/40 bg-black/70 text-danger" : "border-white/20 bg-black/70 text-white"
+            }`}
+          >
+            {t(ALERT_KEYS[alert.id] ?? "alertCalm")}
           </p>
-          <p className="text-[10px] uppercase tracking-widest text-muted">
-            {t("sector", { n: hud.level })}
-          </p>
-          {hud.combo > 1 && (
-            <p className="text-xs font-medium uppercase tracking-widest text-accent">
-              {t("combo", { n: hud.combo })}
+          {hud.weaponTier > 0 && (
+            <p className={`${chip} border-white/20 bg-black/70 text-accent opacity-100`}>{weapon}</p>
+          )}
+          {hud.cloakT > 0 && (
+            <p className={`${chip} border-white/20 bg-black/70 text-white opacity-100`}>
+              {t("cloak", { t: hud.cloakT.toFixed(1) })}
             </p>
           )}
         </div>
-        <div className="text-right">
-          <p className="font-display text-3xl leading-none tabular-nums landscape:text-2xl">
-            {m}:{s}
-          </p>
-          <p className="text-[10px] uppercase tracking-widest text-muted">
-            {t("takenWrecked", { a: hud.abducted, d: hud.destroyed })}
-          </p>
-        </div>
-      </div>
-      <div className="mt-2 flex items-center gap-2 landscape:mt-1">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-          <div
-            className={`h-full rounded-full transition-[width] duration-150 ${hot ? "bg-danger" : "bg-accent"}`}
-            style={{ width: `${Math.min(100, hud.heat)}%` }}
-          />
-        </div>
-        <div className="flex gap-1">
-          {Array.from({ length: hud.maxHp }).map((_, i) => (
-            <span
-              key={i}
-              className={`h-2 w-2 rounded-full ${i < hud.hp ? "bg-accent" : "bg-surface-2"}`}
-            />
-          ))}
-          {hud.shieldMax > 0 &&
-            Array.from({ length: Math.ceil(hud.shieldMax) }).map((_, i) => (
-              <span
-                key={`s${i}`}
-                className={`h-2 w-2 rounded-full ${i < hud.shield ? "bg-warn" : "bg-surface-2"}`}
-              />
-            ))}
-        </div>
-      </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        <p
-          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] ${
-            hot ? "bg-danger/20 text-danger" : "bg-surface/80 text-muted"
-          }`}
-        >
-          {t(ALERT_KEYS[alert.id] ?? "alertCalm")}
-        </p>
-        {hud.weaponTier > 0 && (
-          <p className="inline-flex rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-accent">
-            {weapon}
-          </p>
-        )}
-        {hud.cloakT > 0 && (
-          <p className="inline-flex rounded-full bg-fg/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-fg">
-            {t("cloak", { t: hud.cloakT.toFixed(1) })}
-          </p>
-        )}
       </div>
     </div>
   );
@@ -920,7 +958,7 @@ function MiniMap({ marks }: { marks: MapMark[] }) {
           />
         ))}
       </div>
-      <div className="mt-1 flex flex-wrap gap-x-2 text-[9px] uppercase tracking-widest text-faint">
+      <div className="mt-1 flex flex-wrap gap-x-2 rounded-md bg-bg/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
         <span className="text-warn">{t("mapGun")}</span>
         <span className="text-fg">{t("mapCloak")}</span>
         <span className="text-danger">{t("mapArmy")}</span>
