@@ -52,6 +52,15 @@ test("native wrap projects exist with the store package id", () => {
   assert.ok(existsSync(join(ROOT, "WRAP.md")), "WRAP.md missing");
 });
 
+test("published privacy page uses the Play package and Alien Attack Saucer label", () => {
+  for (const rel of ["public/privacy/index.html", "docs/privacy/index.html"]) {
+    const html = read(rel);
+    assert.match(html, /com\.saucerraid\.alienattacksaucer/);
+    assert.doesNotMatch(html, /com\.menearz\.saucerraid/);
+    assert.match(html, /App label: Alien Attack Saucer/);
+  }
+});
+
 test("github.io spa title stays Saucer Raid; wrap stamps Alien Attack Saucer", () => {
   const spa = read("spa/index.html");
   const wrap = read("vite.wrap.config.ts");
