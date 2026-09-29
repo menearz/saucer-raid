@@ -29,7 +29,7 @@ export function createSpaConfig(opts: {
         ? VitePWA({
             registerType: "autoUpdate",
             injectRegister: "script-defer",
-            includeAssets: ["favicon.svg", "apple-touch-icon.png", "pwa-192.png", "pwa-512.png"],
+            includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon.png", "pwa-192.png", "pwa-512.png"],
             manifest: {
               name: "Saucer Raid",
               short_name: "Saucer Raid",
