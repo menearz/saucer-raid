@@ -18,6 +18,9 @@ attachments
 !.env.example
 *.jpg
 *.jpeg
+*.jks
+*.keystore
+keystore.properties
 
 # Capacitor copies the wrap bundle here on `npm run cap:sync`.
 android/app/src/main/assets/public

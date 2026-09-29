@@ -1,6 +1,6 @@
 # Saucer Raid — store wrap
 
-The **website stays on GitHub Pages**. The **store wrap is this extra build**. Upload waits on a Google Play developer account (**$25**) and an Apple Developer account (**$99**). Do not upload from this PR.
+The **website stays on GitHub Pages**. The **store wrap is this extra build**. Android Closed Alpha is already **Available** on Play. The next uploadable code is **versionCode 3** / **versionName 1.2.0**. Production stays off. iOS still waits on an Apple Developer account (**$99**). Do not upload from this PR.
 
 ## Two builds, same game
 
@@ -19,7 +19,8 @@ Game sim, physics, and art are not changed. Leftover better-auth / pglite / logi
 ## App identity
 
 - **Name:** Alien Attack Saucer
-- **Package / bundle id:** `com.menearz.saucerraid`
+- **Android / Play package:** `com.saucerraid.alienattacksaucer` (Closed Alpha already Available at 1.1.0 / versionCode 2; next upload is versionCode **3** / versionName **1.2.0**; production stays off)
+- **iOS bundle id (parked):** `com.menearz.saucerraid`
 
 ## Icon slot (Spectre)
 
@@ -52,7 +53,7 @@ npm run cap:sync            # rebuild + copy into android/ and ios/
 
 `npm run build:pages` is unchanged. Use it whenever you want to refresh github.io. Do not point Capacitor at `docs/`.
 
-## Android (Chief, after the Google $25 account)
+## Android (Closed Alpha — production off)
 
 You do **not** need a Mac.
 
@@ -69,7 +70,7 @@ You do **not** need a Mac.
 3. First open: let Gradle sync. Accept any SDK / build-tools prompts.
 4. Run on an emulator or a USB phone to play-test.
 5. For Play: **Build → Generate Signed App Bundle / APK → Android App Bundle**.
-6. Upload the `.aab` in [Play Console](https://play.google.com/console). Package id must stay `com.menearz.saucerraid`.
+6. Upload the `.aab` in [Play Console](https://play.google.com/console) as the next Closed Alpha. Production stays off. Package id must stay `com.saucerraid.alienattacksaucer`. The next uploadable code is versionCode **3** / versionName **1.2.0**.
 
 Signing keys stay on Chief’s machine. This repo does not ship a keystore.
 
@@ -98,4 +99,4 @@ The `ios/` folder is already in git so this PR does not need a Mac. You **cannot
 - No store upload from CI or from this repo
 - No change to the live Pages game unless someone runs `build:pages` and commits `docs/`
 
-When the accounts exist, Chief opens Android Studio / Xcode as above and uploads. Listing shots live in `store/` (`screenshot-hangar.png`, `screenshot-raid.png`, `screenshot-portrait.png`, `screenshot-boss.png`). Do not upload from this repo.
+Chief opens Android Studio for the next Closed Alpha AAB (production stays off) and Xcode when the Apple account exists. Listing shots live in `store/` (`screenshot-hangar.png`, `screenshot-raid.png`, `screenshot-portrait.png`, `screenshot-boss.png`). Do not upload from this repo.
