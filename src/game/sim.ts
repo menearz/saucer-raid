@@ -36,6 +36,8 @@ import {
   BOSS_SALVAGE,
   BOSS_SCORE_BONUS,
   BOSS_STING,
+  militaryShotDamage,
+  militaryUnitHp,
   soakHit,
 } from "./raid-content";
 
@@ -400,12 +402,14 @@ function edgePos() {
 
 function spawnUnit(w: World, kind: "jeep" | "tank" | "heli" | "plane") {
   const p = edgePos();
+  const level = w.state.level || 1;
   const specs = {
-    jeep: { r: 26, w: 64, h: 40, hp: 70, score: 480, heat: 3, abduct: true, t: 1.2, sprite: "jeep" },
-    tank: { r: 34, w: 86, h: 48, hp: 160, score: 900, heat: 4, abduct: true, t: 1.8, sprite: "tank" },
-    heli: { r: 30, w: 72, h: 64, hp: 90, score: 760, heat: 3, abduct: false, t: 0, sprite: "heli" },
-    plane: { r: 28, w: 88, h: 56, hp: 80, score: 820, heat: 3, abduct: false, t: 0, sprite: "plane" },
+    jeep: { r: 26, w: 64, h: 40, score: 480, heat: 3, abduct: true, t: 1.2, sprite: "jeep" },
+    tank: { r: 34, w: 86, h: 48, score: 900, heat: 4, abduct: true, t: 1.8, sprite: "tank" },
+    heli: { r: 30, w: 72, h: 64, score: 760, heat: 3, abduct: false, t: 0, sprite: "heli" },
+    plane: { r: 28, w: 88, h: 56, score: 820, heat: 3, abduct: false, t: 0, sprite: "plane" },
   }[kind];
+  const hp = militaryUnitHp(kind, level);
   w.actors.push({
     id: 70000 + Math.floor(Math.random() * 9999),
     kind,
@@ -416,8 +420,8 @@ function spawnUnit(w: World, kind: "jeep" | "tank" | "heli" | "plane") {
     r: specs.r,
     w: specs.w,
     h: specs.h,
-    hp: specs.hp,
-    maxHp: specs.hp,
+    hp,
+    maxHp: hp,
     facing: 0,
     lift: 0,
     abductTime: specs.t,
@@ -722,7 +726,7 @@ export function step(w: World, input: Actions, dt: number) {
         a.facing = Math.atan2(jy, jx);
         if (a.fireCd <= 0 && jl < 620) {
           a.fireCd = 1.55;
-          spawnShot(w, a.x, a.y, jx, jy, 260, 1, 1.8);
+          spawnShot(w, a.x, a.y, jx, jy, 260, militaryShotDamage("rival", st.level || 1), 1.8);
           audio.laser();
         }
       }
@@ -748,7 +752,7 @@ export function step(w: World, input: Actions, dt: number) {
         const range = a.kind === "tank" ? 580 : 520;
         if (!cutscene && a.fireCd <= 0 && jl < range) {
           a.fireCd = a.kind === "tank" ? 1.85 : 1.15;
-          spawnShot(w, a.x, a.y, jx, jy, a.kind === "tank" ? 210 : 280, a.kind === "tank" ? 2 : 1);
+          spawnShot(w, a.x, a.y, jx, jy, a.kind === "tank" ? 210 : 280, militaryShotDamage(a.kind === "tank" ? "tank" : "jeep", st.level || 1));
           if (a.kind === "tank") audio.tank();
         }
       }
@@ -763,7 +767,7 @@ export function step(w: World, input: Actions, dt: number) {
       const jl = Math.hypot(s.x - a.x, s.y - a.y);
       if (!cutscene && (st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && jl < 480) {
         a.fireCd = 0.72;
-        spawnShot(w, a.x, a.y, s.x - a.x, s.y - a.y, 300, 1, 1.6);
+        spawnShot(w, a.x, a.y, s.x - a.x, s.y - a.y, 300, militaryShotDamage("heli", st.level || 1), 1.6);
         audio.heli();
       }
     } else if (a.kind === "plane") {
@@ -774,7 +778,7 @@ export function step(w: World, input: Actions, dt: number) {
       a.wanderT -= dt;
       if (!cutscene && (st.cloakT ?? 0) <= 0 && a.fireCd <= 0) {
         a.fireCd = 0.38;
-        spawnShot(w, a.x, a.y, Math.cos(hd), Math.sin(hd), 420, 1, 1.1);
+        spawnShot(w, a.x, a.y, Math.cos(hd), Math.sin(hd), 420, militaryShotDamage("plane", st.level || 1), 1.1);
         audio.jet();
       }
       if (

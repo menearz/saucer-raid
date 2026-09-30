@@ -45,6 +45,29 @@ export function bossWave(level: number): number {
   return Math.max(1, Math.floor(Math.max(1, level) / 3));
 }
 
+export const MILITARY_BASE_HP = {
+  jeep: 70,
+  tank: 160,
+  heli: 90,
+  plane: 80,
+} as const;
+
+export type MilitaryKind = keyof typeof MILITARY_BASE_HP;
+export type ShotKind = MilitaryKind | "rival";
+
+/** Level 1 matches the old flat HP. +10% of that base for each level above 1, with no cap. */
+export function militaryUnitHp(kind: MilitaryKind, level: number): number {
+  const n = Math.max(1, level);
+  return Math.round(MILITARY_BASE_HP[kind] * (1 + (n - 1) * 0.1));
+}
+
+/** Levels 1–6 match the old flat shot damage. +1 every six levels after that, with no cap. */
+export function militaryShotDamage(kind: ShotKind, level: number): number {
+  const base = kind === "tank" ? 2 : 1;
+  const n = Math.max(1, level);
+  return base + Math.floor((n - 1) / 6);
+}
+
 export function bossHpForLevel(level: number): number {
   return 2200 + 1100 * (bossWave(level) - 1);
 }
