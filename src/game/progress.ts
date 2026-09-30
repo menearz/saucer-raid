@@ -94,8 +94,9 @@ export function resetProgress() {
   return p;
 }
 
+/** Next-rank salvage. Exactly 2.5× the old `8 + rank * 8` line. Max ranks stay put. */
 export function upgradeCost(rank: number) {
-  return 8 + rank * 8;
+  return (8 + rank * 8) * 2.5;
 }
 
 export function buyUpgrade(p: Progress, craftId: CraftId, id: UpgradeId): Progress {
@@ -135,29 +136,50 @@ export function raidSeconds(level: number) {
   return Math.max(70, 102 - (level - 1) * 4);
 }
 
+/**
+ * Repeat-spawn delay. The old curve floored mid-campaign (`oldFloor`).
+ * Past that point the delay keeps falling toward `lateFloor`.
+ */
+function spawnCooldown(
+  base: number,
+  extra: number,
+  rate: number,
+  oldFloor: number,
+  lateFloor: number,
+) {
+  const linear = base - extra * rate;
+  if (linear >= oldFloor) return linear;
+  const extraAtFloor = (base - oldFloor) / rate;
+  const past = extra - extraAtFloor;
+  return Math.max(lateFloor, oldFloor - past * rate * 0.28);
+}
+
 export function militaryWant(level: number, alert: Alert) {
-  const extra = Math.max(0, level - 1);
+  const lv = Math.max(1, level);
+  const extra = Math.max(0, lv - 1);
   const jeep =
-    (alert === "uneasy" ? 2 : alert === "alert" ? 2 : alert === "hostile" ? 3 : alert === "air-raid" ? 3 : level >= 2 ? 1 : 0) +
+    (alert === "uneasy" ? 2 : alert === "alert" ? 2 : alert === "hostile" ? 3 : alert === "air-raid" ? 3 : lv >= 2 ? 1 : 0) +
     Math.floor(extra / 2);
   let tank = alert === "alert" ? 1 : alert === "hostile" ? 2 : alert === "air-raid" ? 2 : 0;
-  if (level >= 2 && alert === "uneasy") tank = Math.max(tank, 1);
+  if (lv >= 2 && alert === "uneasy") tank = Math.max(tank, 1);
   tank += Math.floor(extra / 2);
   let heli = alert === "hostile" ? 1 : alert === "air-raid" ? 2 : 0;
-  if (level >= 3 && (alert === "alert" || alert === "hostile")) heli = Math.max(heli, 1);
-  if (level >= 5) heli += 1;
+  if (lv >= 3 && (alert === "alert" || alert === "hostile")) heli = Math.max(heli, 1);
+  if (lv >= 5) heli += 1;
+  if (lv > 5) heli += Math.floor((lv - 5) / 3);
   let plane = alert === "air-raid" ? 2 : 0;
-  if (level >= 4 && alert === "hostile") plane = Math.max(plane, 1);
-  if (level >= 6) plane += 1;
+  if (lv >= 4 && alert === "hostile") plane = Math.max(plane, 1);
+  if (lv >= 6) plane += 1;
+  if (lv > 6) plane += Math.floor((lv - 6) / 3);
   return {
-    jeep: Math.min(8, jeep),
-    tank: Math.min(6, tank),
-    heli: Math.min(5, heli),
-    plane: Math.min(5, plane),
-    jeepCd: Math.max(1.6, 3.2 - extra * 0.18),
-    tankCd: Math.max(2.4, 5.5 - extra * 0.28),
-    heliCd: Math.max(2.8, 6.2 - extra * 0.3),
-    planeCd: Math.max(3.2, 7.4 - extra * 0.32),
+    jeep: Math.min(8 + Math.floor(extra / 3), jeep),
+    tank: Math.min(6 + Math.floor(extra / 4), tank),
+    heli: Math.min(5 + Math.floor(Math.max(0, lv - 5) / 2), heli),
+    plane: Math.min(5 + Math.floor(Math.max(0, lv - 6) / 2), plane),
+    jeepCd: spawnCooldown(3.2, extra, 0.18, 1.6, 0.45),
+    tankCd: spawnCooldown(5.5, extra, 0.28, 2.4, 0.7),
+    heliCd: spawnCooldown(6.2, extra, 0.3, 2.8, 0.85),
+    planeCd: spawnCooldown(7.4, extra, 0.32, 3.2, 1),
   };
 }
 

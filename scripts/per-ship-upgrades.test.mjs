@@ -18,6 +18,8 @@ globalThis.localStorage = {
 };
 
 const {
+  UPGRADES,
+  awardSalvage,
   buyUpgrade,
   emptyProgress,
   normalizeProgress,
@@ -36,10 +38,41 @@ test("source: upgradesByCraft + ranksFor + per-craft buyUpgrade", () => {
   assert.match(RAID, /BOSS_SALVAGE = 3/);
 });
 
-test("economy nerf numbers stay in place", () => {
-  assert.equal(upgradeCost(0), 8);
-  assert.equal(upgradeCost(1), 16);
+test("one ship costs 2.5× the old salvage to max, and max ranks stay put", () => {
+  assert.equal(upgradeCost(0), 20);
+  assert.equal(upgradeCost(1), 40);
+  assert.equal(upgradeCost(2), 60);
+  assert.equal(upgradeCost(3), 80);
+  assert.deepEqual(
+    UPGRADES.map((u) => [u.id, u.max]),
+    [
+      ["engines", 4],
+      ["tractor", 4],
+      ["armor", 4],
+      ["shields", 4],
+      ["weapons", 3],
+    ],
+  );
+  const oldCost = (rank) => 8 + rank * 8;
+  let next = 0;
+  let prev = 0;
+  for (const u of UPGRADES) {
+    for (let rank = 0; rank < u.max; rank++) {
+      next += upgradeCost(rank);
+      prev += oldCost(rank);
+    }
+  }
+  assert.equal(prev, 368);
+  assert.equal(next, 920);
+  assert.equal(next / prev, 2.5);
   assert.match(PROGRESS, /score \/ 180/);
+});
+
+test("raid salvage payout stays on the current formula", () => {
+  store.clear();
+  assert.equal(awardSalvage(emptyProgress(), 1800, true).salvage, 16);
+  assert.equal(awardSalvage(emptyProgress(), 1800, false).salvage, 12);
+  assert.equal(awardSalvage(emptyProgress(), 0, false).salvage, 2);
 });
 
 test("legacy flat upgrades migrate onto current craft only", () => {
