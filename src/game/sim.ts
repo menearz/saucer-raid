@@ -443,10 +443,7 @@ function shoutHuman(w: World, a: Actor) {
   a.shouted = n + 1;
   const line = pickHumanLine(n);
   pushDialogue(w, a.id, line, a.x, a.y, 1.8);
-  const roll = Math.random();
-  if (roll < 0.34) audio.scream();
-  else if (roll < 0.67) audio.cry();
-  else audio.plea();
+  audio.victimShout();
   haptics.tap();
 }
 

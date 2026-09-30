@@ -1,4 +1,20 @@
-import { haptics } from "./haptics";
+import { haptics } from "./haptics.ts";
+
+export const VICTIM_STINGS = ["scream", "cry", "plea", "yelp", "gasp", "holler"] as const;
+
+export type VictimSting = (typeof VICTIM_STINGS)[number];
+
+/** Next victim sting, skipping whichever of the last two were just used. */
+export function pickVictimSting(
+  recent: readonly VictimSting[],
+  rng: () => number = Math.random,
+): VictimSting {
+  const blocked = new Set(recent.slice(-2));
+  let pool: readonly VictimSting[] = VICTIM_STINGS.filter((id) => !blocked.has(id));
+  if (pool.length === 0) pool = VICTIM_STINGS;
+  const i = Math.min(pool.length - 1, Math.floor(rng() * pool.length));
+  return pool[i]!;
+}
 
 export class AudioBus {
   ctx: AudioContext | null = null;
@@ -8,13 +24,13 @@ export class AudioBus {
   beamOsc: OscillatorNode | null = null;
   beamGain: GainNode | null = null;
   private beamBuzzed = false;
+  private recentVictims: VictimSting[] = [];
 
   unlock() {
     if (!this.ctx) {
       const AC =
         window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AC({ latencyHint: "interactive" });
       this.master = this.ctx.createGain();
       this.sfx = this.ctx.createGain();
@@ -40,9 +56,10 @@ export class AudioBus {
     dur: number,
     vol = 0.12,
     slide?: number,
+    delay = 0,
   ) {
     if (!this.ctx || !this.sfx || this.muted) return;
-    const t = this.ctx.currentTime;
+    const t = this.ctx.currentTime + delay;
     const o = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     o.type = type;
@@ -110,9 +127,44 @@ export class AudioBus {
     haptics.hurt();
   }
 
+  /** Random victim sting. Owns avoid-last-two so callers stay a single call. */
+  victimShout() {
+    const id = pickVictimSting(this.recentVictims);
+    this.recentVictims.push(id);
+    if (this.recentVictims.length > 2) this.recentVictims.shift();
+    switch (id) {
+      case "scream":
+        this.scream();
+        break;
+      case "cry":
+        this.cry();
+        break;
+      case "plea":
+        this.plea();
+        break;
+      case "yelp":
+        this.yelp();
+        break;
+      case "gasp":
+        this.gasp();
+        break;
+      case "holler":
+        this.holler();
+        break;
+      default: {
+        const missed: never = id;
+        void missed;
+      }
+    }
+  }
+
   plea() {
-    this.env(340, "triangle", 0.22, 0.07, 280);
-    this.env(520, "sine", 0.28, 0.05, 400);
+    const a = 360 + Math.random() * 80;
+    const b = 520 + Math.random() * 120;
+    this.env(a, "triangle", 0.07, 0.06, a * 1.62);
+    this.env(a * 0.82, "sine", 0.07, 0.04, a * 1.28);
+    this.env(b, "triangle", 0.08, 0.055, b * 1.48, 0.1);
+    this.env(b * 0.8, "sine", 0.08, 0.035, b * 1.22, 0.1);
   }
 
   scream() {
@@ -122,12 +174,15 @@ export class AudioBus {
     const g = this.ctx.createGain();
     const f = this.ctx.createBiquadFilter();
     o.type = "sawtooth";
-    o.frequency.setValueAtTime(420 + Math.random() * 80, t);
-    o.frequency.exponentialRampToValueAtTime(720 + Math.random() * 160, t + 0.12);
-    o.frequency.exponentialRampToValueAtTime(280, t + 0.42);
+    const start = 240 + Math.random() * 420;
+    const peak = start * (1.7 + Math.random() * 1.35);
+    const end = 120 + Math.random() * 220;
+    o.frequency.setValueAtTime(start, t);
+    o.frequency.exponentialRampToValueAtTime(peak, t + 0.11);
+    o.frequency.exponentialRampToValueAtTime(Math.max(48, Math.min(end, peak * 0.55)), t + 0.42);
     f.type = "bandpass";
-    f.frequency.value = 1400;
-    f.Q.value = 3.2;
+    f.frequency.value = 900 + Math.random() * 1100;
+    f.Q.value = 2.6 + Math.random() * 1.8;
     g.gain.setValueAtTime(0.09, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
     o.connect(f);
@@ -139,9 +194,101 @@ export class AudioBus {
   }
 
   cry() {
-    this.env(310, "sine", 0.35, 0.06, 240);
-    this.env(480, "triangle", 0.4, 0.04, 360);
-    this.noise(0.22, 0.03);
+    if (!this.ctx || !this.sfx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const dur = 0.46;
+    const base = 260 + Math.random() * 90;
+    const sine = this.ctx.createOscillator();
+    const tri = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    sine.type = "sine";
+    tri.type = "triangle";
+    const waves = [1, 0.84, 0.92, 0.7, 0.78, 0.55];
+    sine.frequency.setValueAtTime(base, t);
+    tri.frequency.setValueAtTime(base * 1.5, t);
+    for (let i = 1; i < waves.length; i++) {
+      const when = t + (dur * i) / (waves.length - 1);
+      sine.frequency.linearRampToValueAtTime(base * waves[i]!, when);
+      tri.frequency.linearRampToValueAtTime(base * 1.5 * waves[i]!, when);
+    }
+    g.gain.setValueAtTime(0.05, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    sine.connect(g);
+    tri.connect(g);
+    g.connect(this.sfx);
+    sine.start(t);
+    tri.start(t);
+    sine.stop(t + dur + 0.02);
+    tri.stop(t + dur + 0.02);
+    this.noise(0.28, 0.022);
+  }
+
+  yelp() {
+    if (!this.ctx || !this.sfx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = "square";
+    const f0 = 1040 + Math.random() * 560;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f0 * 1.22, t + 0.045);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.07, t + 0.012);
+    g.gain.setValueAtTime(0.07, t + 0.07);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g);
+    g.connect(this.sfx);
+    o.start(t);
+    o.stop(t + 0.13);
+  }
+
+  gasp() {
+    if (!this.ctx || !this.sfx || this.muted) return;
+    const dur = 0.2;
+    const rate = this.ctx.sampleRate;
+    const buf = this.ctx.createBuffer(1, Math.max(1, Math.floor(rate * dur)), rate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const g = this.ctx.createGain();
+    const f = this.ctx.createBiquadFilter();
+    f.type = "bandpass";
+    f.frequency.value = 1400 + Math.random() * 600;
+    f.Q.value = 0.6;
+    const t = this.ctx.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09, t + dur * 0.78);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f);
+    f.connect(g);
+    g.connect(this.sfx);
+    src.start(t);
+    src.stop(t + dur + 0.02);
+  }
+
+  holler() {
+    if (!this.ctx || !this.sfx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const f = this.ctx.createBiquadFilter();
+    o.type = "sawtooth";
+    const mid = 200 + Math.random() * 90;
+    o.frequency.setValueAtTime(mid, t);
+    o.frequency.linearRampToValueAtTime(mid * (1.02 + Math.random() * 0.06), t + 0.16);
+    o.frequency.exponentialRampToValueAtTime(Math.max(55, mid * 0.42), t + 0.35);
+    f.type = "bandpass";
+    f.frequency.value = 520 + Math.random() * 180;
+    f.Q.value = 0.7;
+    g.gain.setValueAtTime(0.085, t);
+    g.gain.setValueAtTime(0.085, t + 0.18);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    o.connect(f);
+    f.connect(g);
+    g.connect(this.sfx);
+    o.start(t);
+    o.stop(t + 0.38);
   }
 
   tank() {
