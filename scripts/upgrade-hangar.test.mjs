@@ -134,3 +134,27 @@ test("raid HUD drops the full-width plate and keeps overlay chrome", () => {
   assert.match(hud, /h-1\.5[^"]*bg-black\/40/);
   assert.match(hud, /bg-black\/70/);
 });
+
+test("landscape HUD is two floating clusters, not a full-width band", () => {
+  const hud = sliceBetween(HUD, "function HudOverlay(", "function MiniMap(");
+  assert.match(hud, /landscape:text-2xl/);
+  assert.match(hud, /landscape:gap-1/);
+  assert.match(hud, /landscape:pr-\[6\.25rem\]/);
+  assert.match(hud, /h-1\.5 w-36 shrink-0 overflow-hidden rounded-full bg-black\/40/);
+  assert.match(hud, /hidden items-center gap-1 landscape:flex/);
+  assert.match(hud, /mt-2 flex items-center gap-2 landscape:hidden/);
+  assert.match(hud, /hud\.alert !== "calm"/);
+  assert.match(hud, /showChips &&/);
+  assert.doesNotMatch(hud, /backdrop-blur/);
+  assert.doesNotMatch(hud, /bg-bg\/\d+/);
+  assert.doesNotMatch(hud, /border-white\/10/);
+
+  const map = sliceBetween(HUD, "function MiniMap(", "function UpgradeBay(");
+  assert.match(map, /landscape:h-24 landscape:w-24/);
+  assert.match(map, /landscape:top-\[max\(4\.75rem,calc\(env\(safe-area-inset-top\)\+4rem\)\)\]/);
+
+  const touch = sliceBetween(HUD, "function TouchLayer(", "function HoldBtn(");
+  assert.match(touch, /landscape:top-\[max\(0\.45rem,env\(safe-area-inset-top\)\)\]/);
+  assert.match(touch, /landscape:h-16 landscape:w-16/);
+  assert.match(touch, /landscape:h-\[72px\] landscape:w-\[72px\]/);
+});
