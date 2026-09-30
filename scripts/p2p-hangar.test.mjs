@@ -16,12 +16,24 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const HUD = readFileSync(join(ROOT, "src/components/game/SaucerRaid.tsx"), "utf8");
 const P2P = readFileSync(join(ROOT, "src/lib/multiplayer/p2p.ts"), "utf8");
 
-test("hangar title has a room code plus Host and Join", () => {
+test("wingman is a stepped Host or Join sheet; handshake stays behind trouble", () => {
   assert.match(HUD, /P2PRoom/);
   assert.match(HUD, /createPagesSignal|pagesSignal|PagesSignal/);
+  assert.match(HUD, /t\("wingmanCta"\)/);
   assert.match(HUD, /t\("host"\)/);
   assert.match(HUD, /t\("join"\)/);
+  assert.match(HUD, /t\("wingmanHostTitle"\)/);
+  assert.match(HUD, /t\("wingmanJoinTitle"\)/);
   assert.match(HUD, /t\("roomCode"\)/);
+  assert.match(HUD, /makeRoomCode\(\)/);
+  assert.doesNotMatch(HUD, /code\.trim\(\) \|\| makeRoomCode\(\)/);
+  assert.match(HUD, /text-4xl tracking-\[0\.18em\]/);
+  assert.match(HUD, /length >= 4/);
+  assert.match(HUD, /t\("wingmanTrouble"\)/);
+  assert.match(HUD, /advanced &&/);
+  assert.match(HUD, /exportHandshake/);
+  assert.match(HUD, /importHandshake/);
+  assert.doesNotMatch(HUD, /<details/);
 });
 
 test("P2PRoom keeps the WebRTC mesh and accepts a signal transport", () => {
@@ -44,7 +56,10 @@ test("mailbox poll returns peers and only new signals", () => {
     row: { id: 7, from: "a", kind: "ice", payload: { candidate: "x" } },
   });
   const first = pollMailbox(box, "b", "Join", 0);
-  assert.equal(first.peers.some((p) => p.id === "a"), true);
+  assert.equal(
+    first.peers.some((p) => p.id === "a"),
+    true,
+  );
   assert.equal(first.signals.length, 2);
   const again = pollMailbox(box, "b", "Join", 7);
   assert.equal(again.signals.length, 0);
@@ -103,6 +118,9 @@ test("handshake tape round-trips offers without a Node API route", () => {
   const join = newMailbox();
   importTape(join, tape);
   const seen = pollMailbox(join, "join", "Join", 0);
-  assert.equal(seen.peers.some((p) => p.id === "host"), true);
+  assert.equal(
+    seen.peers.some((p) => p.id === "host"),
+    true,
+  );
   assert.equal(seen.signals[0]?.kind, "offer");
 });

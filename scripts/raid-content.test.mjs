@@ -11,6 +11,7 @@ import {
   canHumanShout,
   COLS,
   pickHumanLine,
+  resetRecentHumanLines,
   ROWS,
 } from "../src/game/types.ts";
 import {
@@ -65,19 +66,98 @@ test("HUMAN_LINES includes the exact sentinel line and a big short pool", () => 
   }
 });
 
-test("first person shout is usually AHH NOT AGAIN; later shouts stay mixed", () => {
-  assert.ok(AHH_FIRST_SHOUT_CHANCE >= 0.65);
-  assert.equal(pickHumanLine(0, () => 0), AHH_NOT_AGAIN);
-  assert.equal(pickHumanLine(0, () => 0.71), AHH_NOT_AGAIN);
+const COMEDY_ADDED = [
+  "Wrong planet, bud!",
+  "I left the stove on!",
+  "Not the Sunday pants!",
+  "Granny's watchin'!",
+  "I just flossed!",
+  "Take Bob — he's louder!",
+  "This ain't Area 51!",
+  "I rented this suit!",
+  "Put me by the silo!",
+  "My podcast's live!",
+  "Don't eat the hat!",
+  "I paid for parking!",
+  "The fence was locked!",
+  "Mom said no beams!",
+  "I got a coupon!",
+  "Alien HOA violation!",
+];
+
+test("first person shout is sometimes AHH NOT AGAIN, not the default", () => {
+  resetRecentHumanLines();
+  assert.equal(AHH_FIRST_SHOUT_CHANCE, 0.28);
+  assert.ok(AHH_FIRST_SHOUT_CHANCE < 0.5, "first grab gag must be occasional");
+  assert.equal(
+    pickHumanLine(0, () => 0),
+    AHH_NOT_AGAIN,
+  );
+  assert.equal(
+    pickHumanLine(0, () => 0.279),
+    AHH_NOT_AGAIN,
+  );
+  resetRecentHumanLines();
+  assert.notEqual(
+    pickHumanLine(0, () => 0.99),
+    AHH_NOT_AGAIN,
+  );
   let firstAhh = 0;
   let laterAhh = 0;
   const N = 4000;
+  resetRecentHumanLines();
   for (let i = 0; i < N; i++) {
     if (pickHumanLine(0) === AHH_NOT_AGAIN) firstAhh++;
     if (pickHumanLine(1) === AHH_NOT_AGAIN) laterAhh++;
   }
-  assert.ok(firstAhh / N > 0.65, `first shout AHH rate ${firstAhh / N} should be high`);
+  const firstRate = firstAhh / N;
+  assert.ok(
+    firstRate > 0.18 && firstRate < 0.42,
+    `first shout AHH rate ${firstRate} should be occasional`,
+  );
   assert.ok(laterAhh / N < 0.2, `later shouts must not force AHH (${laterAhh / N})`);
+});
+
+test("new short comedy lines join the pool and recent lines are skipped", () => {
+  for (const line of COMEDY_ADDED) {
+    assert.ok(HUMAN_LINES.includes(line), `missing ${line}`);
+    assert.ok(line.length <= 28, `"${line}" is too long`);
+  }
+  assert.ok(HUMAN_LINES.length >= 36 + COMEDY_ADDED.length);
+
+  resetRecentHumanLines();
+  const primed = [];
+  for (let i = 0; i < 8; i++) primed.push(pickHumanLine(1, () => i / HUMAN_LINES.length));
+  assert.equal(new Set(primed).size, 8);
+  let calls = 0;
+  const next = pickHumanLine(1, () => {
+    calls += 1;
+    if (calls === 1) return 0;
+    return 20 / HUMAN_LINES.length;
+  });
+  assert.ok(calls >= 2, "recent line should force a retry");
+  assert.equal(next, HUMAN_LINES[20]);
+  assert.ok(!primed.includes(next));
+
+  resetRecentHumanLines();
+  let stuck = 0;
+  assert.equal(
+    pickHumanLine(1, () => {
+      stuck += 1;
+      return 0;
+    }),
+    HUMAN_LINES[0],
+  );
+  assert.equal(stuck, 1);
+  stuck = 0;
+  assert.equal(
+    pickHumanLine(1, () => {
+      stuck += 1;
+      return 0;
+    }),
+    HUMAN_LINES[0],
+  );
+  assert.equal(stuck, 7, "at most 6 avoid retries, then accept the draw");
 });
 
 test("AHH NOT AGAIN stays on people; cows never shout", () => {
@@ -161,7 +241,9 @@ test("rival never uses the player's selected hull, including Classic Disc", () =
   }
   const vsDisc = makeBossActor(3, 0, 0, 1, "saucer-1");
   assert.ok(
-    ["craft-yoke", "craft-spike", "craft-ember", "craft-keel", "craft-wake"].includes(vsDisc.sprite),
+    ["craft-yoke", "craft-spike", "craft-ember", "craft-keel", "craft-wake"].includes(
+      vsDisc.sprite,
+    ),
     `Classic Disc rival must be one of the other five hulls, got ${vsDisc.sprite}`,
   );
 });
@@ -206,9 +288,15 @@ test("dialogue uses pushDialogue only; score/loot stay on popup; boss life <= be
   assert.match(SIM, /w\.shouts\.length = 0/);
   assert.match(SIM, /pushDialogue\(w, a\.id, line, a\.x, a\.y, 1\.8\)/);
   assert.match(SIM, /pushDialogue\(w, boss\.id, BOSS_HELLO, boss\.x, boss\.y, 2\.35\)/);
-  assert.match(SIM, /pushDialogue\(w, w\.saucer\.id, BOSS_REPLY, w\.saucer\.x, w\.saucer\.y, 2\.15\)/);
+  assert.match(
+    SIM,
+    /pushDialogue\(w, w\.saucer\.id, BOSS_REPLY, w\.saucer\.x, w\.saucer\.y, 2\.15\)/,
+  );
   assert.match(SIM, /pushDialogue\(w, boss\.id, BOSS_FIGHT, boss\.x, boss\.y, 1\.1\)/);
-  assert.match(SIM, /pushDialogue\(w, w\.saucer\.id, BOSS_STING, w\.saucer\.x, w\.saucer\.y, 2\.0\)/);
+  assert.match(
+    SIM,
+    /pushDialogue\(w, w\.saucer\.id, BOSS_STING, w\.saucer\.x, w\.saucer\.y, 2\.0\)/,
+  );
   assert.doesNotMatch(SIM, /popup\([^)]*BOSS_STING/);
   assert.doesNotMatch(SIM, /popup\([^)]*BOSS_REPLY/);
   assert.doesNotMatch(SIM, /popup\([^)]*BOSS_FIGHT/);
