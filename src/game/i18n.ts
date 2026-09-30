@@ -86,6 +86,8 @@ export const EN = {
   pause: "Pause",
   mute: "Mute",
   unmute: "Unmute",
+  sendIdea: "Send an idea",
+  ideaHint: "We read these",
 
   beam: "Beam",
   fire: "Fire",
@@ -212,6 +214,8 @@ export const ES: Record<MsgKey, string> = {
   pause: "Pausa",
   mute: "Silenciar",
   unmute: "Sonido",
+  sendIdea: "Enviar una idea",
+  ideaHint: "Las leemos",
 
   beam: "Beam",
   fire: "Fire",
