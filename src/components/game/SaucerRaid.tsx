@@ -9,6 +9,7 @@ import {
 } from "@/lib/multiplayer/pages-signal";
 import { wingmanWaitMessage } from "@/lib/multiplayer/wingman-status";
 import { audio } from "@/game/audio";
+import { openFeedbackForm } from "@/game/feedback";
 import { loadArt } from "@/game/assets";
 import {
   CRAFTS,
@@ -189,6 +190,7 @@ export function SaucerRaid() {
             </Primary>
             <Ghost onClick={() => begin("retry")}>{t("restartRaid")}</Ghost>
             <Ghost onClick={toTitle}>{t("hangar")}</Ghost>
+            <SendIdea variant="ghost" hint />
             <LangSwitch />
           </div>
         </Overlay>
@@ -265,7 +267,10 @@ function TitleScreen({
       />
       <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-bg/62 via-bg/70 to-bg/95 landscape:bg-linear-to-r landscape:from-bg/94 landscape:via-bg/72 landscape:to-bg/58" />
       <header className="relative z-10 flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
-        <HangarLang />
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <HangarLang />
+          <SendIdea variant="text" />
+        </div>
         {showAccount ? (
           isPending ? (
             <div className="h-8 w-24 animate-pulse rounded-full bg-fg/10" />
@@ -1403,6 +1408,7 @@ function UpgradeBay({
           <Primary onClick={onRetry}>{t("retrySector")}</Primary>
         )}
         <Ghost onClick={onHangar}>{t("hangar")}</Ghost>
+        <SendIdea variant="ghost" />
       </div>
     </Overlay>
   );
@@ -1696,6 +1702,36 @@ function Primary({
       {icon ? <Play className="size-4" /> : null}
       {children}
     </button>
+  );
+}
+
+function openIdea() {
+  haptics.tap();
+  openFeedbackForm();
+}
+
+function SendIdea({ variant, hint = false }: { variant: "ghost" | "text"; hint?: boolean }) {
+  const t = useT();
+  return (
+    <>
+      {variant === "ghost" ? (
+        <Ghost onClick={openIdea}>{t("sendIdea")}</Ghost>
+      ) : (
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            openIdea();
+          }}
+          className="h-6 max-w-full truncate px-0.5 text-left text-xs text-muted"
+        >
+          {t("sendIdea")}
+        </button>
+      )}
+      {hint ? (
+        <p className="text-center text-[10px] leading-snug text-faint">{t("ideaHint")}</p>
+      ) : null}
+    </>
   );
 }
 
