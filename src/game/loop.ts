@@ -23,7 +23,7 @@ export type GameHandle = {
   start: (kind?: "start" | "next" | "retry") => void;
   pause: () => void;
   resume: () => void;
-  /** Upgrade bay → title hangar. Must update world phase; the HUD copy is overwritten each flush. */
+  /** Upgrade bay or paused raid → title hangar. Must update world phase; the HUD copy is overwritten each flush. */
   toHangar: () => void;
   world: World;
 };
