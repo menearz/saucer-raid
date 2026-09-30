@@ -3,15 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import {
-  EN,
-  ES,
-  LANG_KEY,
-  isLang,
-  readLang,
-  translate,
-  writeLang,
-} from "../src/game/i18n.ts";
+import { EN, ES, LANG_KEY, isLang, readLang, translate, writeLang } from "../src/game/i18n.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const HUD = readFileSync(join(ROOT, "src/components/game/SaucerRaid.tsx"), "utf8");
@@ -107,8 +99,26 @@ test("hangar chrome uses the i18n helper; picker and later switch exist", () => 
   assert.match(HUD, /<LanguagePicker/);
   assert.match(HUD, /readyLang && !picked/);
   assert.match(HUD, /hydrate\(\)/);
+  assert.match(HUD, /<HangarLang/);
   assert.match(HUD, /<LangSwitch/);
+  const title = HUD.slice(
+    HUD.indexOf("function TitleScreen"),
+    HUD.indexOf("function HangarWordmark"),
+  );
+  assert.match(title, /<HangarLang/);
+  assert.doesNotMatch(title, /<LangSwitch/);
+  assert.match(title, /bg-bg\/55 backdrop-blur-sm rounded-2xl px-3 py-2/);
   assert.match(HUD, /Language · Idioma/);
+  assert.equal(EN.wingmanCta, "Play with a friend");
+  assert.equal(ES.wingmanCta, "Juega con un amigo");
+  assert.equal(EN.wingmanHostTitle, "Your room code");
+  assert.equal(ES.wingmanHostTitle, "Tu código de sala");
+  assert.equal(EN.wingmanHostHint, "Friend taps Join and types this");
+  assert.equal(EN.wingmanJoinTitle, "Enter room code");
+  assert.equal(EN.wingmanTrouble, "Having trouble connecting?");
+  assert.equal(ES.wingmanTrouble, "¿Problemas para conectar?");
+  assert.equal(EN.wingmanLeave, "Leave room");
+  assert.equal(ES.wingmanLeave, "Salir de la sala");
   assert.match(HUD, />\s*English\s*</);
   assert.match(HUD, />\s*Español\s*</);
   assert.match(HUD, /t\("launch"\)/);

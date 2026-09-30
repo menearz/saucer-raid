@@ -10,7 +10,14 @@ import {
 import { wingmanWaitMessage } from "@/lib/multiplayer/wingman-status";
 import { audio } from "@/game/audio";
 import { loadArt } from "@/game/assets";
-import { CRAFTS, cycleCraftId, loadCraftId, saveCraftId, type Craft, type CraftId } from "@/game/crafts";
+import {
+  CRAFTS,
+  cycleCraftId,
+  loadCraftId,
+  saveCraftId,
+  type Craft,
+  type CraftId,
+} from "@/game/crafts";
 import { haptics } from "@/game/haptics";
 import { Input } from "@/game/input";
 import type { GameHandle } from "@/game/loop";
@@ -37,11 +44,7 @@ import {
 } from "@/game/i18n";
 import { ALERTS } from "@/game/types";
 import { createWorld, loadBest } from "@/game/world";
-import {
-  captionView,
-  createCaptionEngine,
-  syncCaptionEngine,
-} from "./shout-caption";
+import { captionView, createCaptionEngine, syncCaptionEngine } from "./shout-caption";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -254,9 +257,10 @@ function TitleScreen({
         className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_30%] landscape:object-center"
       />
       <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-bg/62 via-bg/70 to-bg/95 landscape:bg-linear-to-r landscape:from-bg/94 landscape:via-bg/72 landscape:to-bg/58" />
-      {showAccount ? (
-        <header className="relative z-10 flex items-center justify-end px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))]">
-          {isPending ? (
+      <header className="relative z-10 flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
+        <HangarLang />
+        {showAccount ? (
+          isPending ? (
             <div className="h-8 w-24 animate-pulse rounded-full bg-fg/10" />
           ) : hasUser ? (
             <SignedIn>
@@ -273,29 +277,31 @@ function TitleScreen({
                 {t("signIn")}
               </Link>
             </SignedOut>
-          )}
-        </header>
-      ) : (
-        <div className="h-[max(0.5rem,env(safe-area-inset-top))] shrink-0" />
-      )}
+          )
+        ) : (
+          <span className="shrink-0" />
+        )}
+      </header>
       <div className="relative z-10 flex flex-1 flex-col px-5 pb-1 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] landscape:flex-row landscape:items-center landscape:gap-6 landscape:px-8 landscape:pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <div className="landscape:w-[min(26rem,42%)] landscape:shrink-0">
-          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-accent">
-            {t("sector", { n: level })}
-          </p>
-          <HangarWordmark wrap={wrap} />
-          <HangarPitch />
-          {best > 0 && (
-            <p className="mt-2 text-xs text-muted">
-              {t("best")} <span className="tabular-nums text-fg">{best}</span>
-              {salvage > 0 && (
-                <>
-                  {" "}
-                  · {t("salvage")} <span className="tabular-nums text-fg">{salvage}</span>
-                </>
-              )}
+          <div className="bg-bg/55 backdrop-blur-sm rounded-2xl px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-accent">
+              {t("sector", { n: level })}
             </p>
-          )}
+            <HangarWordmark wrap={wrap} />
+            <HangarPitch />
+            {best > 0 && (
+              <p className="mt-2 text-xs text-muted">
+                {t("best")} <span className="tabular-nums text-fg">{best}</span>
+                {salvage > 0 && (
+                  <>
+                    {" "}
+                    · {t("salvage")} <span className="tabular-nums text-fg">{salvage}</span>
+                  </>
+                )}
+              </p>
+            )}
+          </div>
           <div className="hidden landscape:block">
             <HangarInfo />
             <LaunchButton ready={ready} onStart={onStart} />
@@ -318,7 +324,6 @@ function TitleScreen({
           <HangarInfo part="stats" />
         </div>
         <NetBay />
-        <LangSwitch />
       </div>
     </div>
   );
@@ -347,7 +352,9 @@ function HangarPitch() {
       <p className="line-clamp-1 text-xs leading-snug text-muted landscape:hidden">
         {t("pitchFly")} {t("pitchControls")}
       </p>
-      <p className="hidden text-xs leading-snug text-muted landscape:block sm:text-sm">{t("pitchFly")}</p>
+      <p className="hidden text-xs leading-snug text-muted landscape:block sm:text-sm">
+        {t("pitchFly")}
+      </p>
       <p className="hidden text-xs leading-snug text-muted landscape:block sm:text-sm">
         {t("pitchControls")}
       </p>
@@ -522,9 +529,7 @@ function StatBar({ label, value, max }: { label: string; value: number; max: num
   const pct = Math.max(8, Math.min(100, Math.round((value / max) * 100)));
   return (
     <div className="flex items-center gap-2">
-      <span className="w-12 shrink-0 text-[10px] uppercase tracking-wide text-faint">
-        {label}
-      </span>
+      <span className="w-12 shrink-0 text-[10px] uppercase tracking-wide text-faint">{label}</span>
       <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
         <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
       </div>
@@ -557,17 +562,83 @@ function LaunchButton({
   );
 }
 
+type NetStatus =
+  | { k: "hint" }
+  | { k: "typeCode" }
+  | { k: "opening"; room: string }
+  | { k: "waiting" }
+  | { k: "inRoom"; room: string }
+  | { k: "linked"; n: number; room: string }
+  | { k: "found"; n: number; room: string }
+  | { k: "empty"; room: string }
+  | { k: "pasteFirst" }
+  | { k: "hostOrJoin" }
+  | { k: "applied" }
+  | { k: "bad" };
+
+type WingNotice = "code" | "handshake" | "copyFailed" | null;
+type WingStep = "choose" | "host" | "join";
+
+function netStatusText(status: NetStatus, t: ReturnType<typeof useT>): string {
+  switch (status.k) {
+    case "hint":
+      return t("netHint");
+    case "typeCode":
+      return t("netTypeCode");
+    case "opening":
+      return t("netOpening", { room: status.room });
+    case "waiting":
+      return t("wingmanWaiting");
+    case "inRoom":
+      return t("netInRoom", { room: status.room });
+    case "linked":
+      return t("netLinked", {
+        n: status.n,
+        s: status.n === 1 ? "" : "s",
+        room: status.room,
+      });
+    case "found":
+      return t("netFound", { n: status.n, room: status.room });
+    case "empty":
+      return t("netRoomEmpty", { room: status.room });
+    case "pasteFirst":
+      return t("netPasteFirst");
+    case "hostOrJoin":
+      return t("netHostOrJoin");
+    case "applied":
+      return t("netHandshakeApplied");
+    case "bad":
+      return t("netHandshakeBad");
+  }
+}
+
+function netNoticeText(notice: WingNotice, t: ReturnType<typeof useT>): string | null {
+  if (notice === "code") return t("wingmanCodeCopied");
+  if (notice === "handshake") return t("netHandshakeCopied");
+  if (notice === "copyFailed") return t("netCopyFailed");
+  return null;
+}
+
 function NetBay() {
   const t = useT();
-  const lang = useI18n((s) => s.lang);
   const [code, setCode] = useState("");
-  const [status, setStatus] = useState(() => t("netHint"));
+  const [status, setStatus] = useState<NetStatus>({ k: "hint" });
+  const [notice, setNotice] = useState<WingNotice>(null);
   const [peers, setPeers] = useState<PeerInfo[]>([]);
   const [tape, setTape] = useState("");
   const [role, setRole] = useState<"Host" | "Join" | null>(null);
+  const [step, setStep] = useState<WingStep | null>(null);
+  const [advanced, setAdvanced] = useState(false);
   const roomRef = useRef<P2PRoom | null>(null);
   const signalRef = useRef<PagesSignal | null>(null);
   const waitStartRef = useRef(0);
+  const joinInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (step !== "join") return;
+    const id = window.setTimeout(() => joinInputRef.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, [step]);
 
   useEffect(() => {
     return () => {
@@ -577,10 +648,6 @@ function NetBay() {
       signalRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    if (role == null) setStatus(t("netHint"));
-  }, [lang, role, t]);
 
   useEffect(() => {
     if (role !== "Join") return;
@@ -593,18 +660,23 @@ function NetBay() {
         remoteCount: peers.length,
         linkedCount: live,
       });
-      if (msg) setStatus(t("netRoomEmpty", { room: code }));
+      if (msg) {
+        setStatus((prev) =>
+          prev.k === "empty" && prev.room === code ? prev : { k: "empty", room: code },
+        );
+      }
     };
     tick();
     const id = setInterval(tick, 500);
     return () => clearInterval(id);
-  }, [role, code, peers, lang, t]);
+  }, [role, code, peers]);
 
   const connect = (room: string, name: "Host" | "Join") => {
     roomRef.current?.close();
     signalRef.current?.dispose();
     setPeers([]);
     setRole(name);
+    setNotice(null);
     waitStartRef.current = Date.now();
     const signal = createPagesSignal(room);
     const selfId = makePeerId();
@@ -614,41 +686,57 @@ function NetBay() {
       name,
       signal,
       onConnected: () => {
-        setStatus(t("netInRoom", { room }));
+        setStatus(name === "Host" ? { k: "waiting" } : { k: "inRoom", room });
       },
       onPeersChanged: (list) => {
         setPeers(list);
         const live = list.filter((p) => p.connectionState === "connected");
         if (live.length) {
-          setStatus(
-            t("netLinked", { n: live.length, s: live.length === 1 ? "" : "s", room }),
-          );
+          setStatus({ k: "linked", n: live.length, room });
         } else if (list.length) {
-          setStatus(t("netFound", { n: list.length, room }));
+          setStatus({ k: "found", n: list.length, room });
         }
       },
     });
     signalRef.current = signal;
     roomRef.current = p2p;
     void p2p.join();
-    setStatus(t("netOpening", { room }));
+    setStatus({ k: "opening", room });
   };
 
-  const host = () => {
-    const room = (code.trim() || makeRoomCode()).toUpperCase();
+  const beginHost = () => {
+    const room = makeRoomCode();
     setCode(room);
+    setAdvanced(false);
+    setStep("host");
     haptics.tap();
     connect(room, "Host");
   };
 
+  const beginJoin = () => {
+    if (role !== "Join") setCode("");
+    setAdvanced(false);
+    setStep("join");
+    haptics.tap();
+  };
+
   const join = () => {
     const room = code.trim().toUpperCase();
-    if (!room) {
-      setStatus(t("netTypeCode"));
+    if (room.length < 4) {
+      setStatus({ k: "typeCode" });
       return;
     }
     haptics.tap();
     connect(room, "Join");
+  };
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setNotice("code");
+    } catch {
+      setNotice("copyFailed");
+    }
   };
 
   const copyHandshake = async () => {
@@ -656,109 +744,355 @@ function NetBay() {
     setTape(next);
     try {
       await navigator.clipboard.writeText(next);
-      setStatus(t("netHandshakeCopied"));
+      setNotice("handshake");
     } catch {
-      setStatus(t("netCopyFailed"));
+      setNotice("copyFailed");
     }
   };
 
   const applyHandshake = () => {
     if (!tape.trim()) {
-      setStatus(t("netPasteFirst"));
+      setStatus({ k: "pasteFirst" });
       return;
     }
     if (!signalRef.current) {
-      setStatus(t("netHostOrJoin"));
+      setStatus({ k: "hostOrJoin" });
       return;
     }
     try {
       signalRef.current.importHandshake(tape);
-      setStatus(t("netHandshakeApplied"));
+      setStatus({ k: "applied" });
     } catch {
-      setStatus(t("netHandshakeBad"));
+      setStatus({ k: "bad" });
     }
   };
 
+  const leave = () => {
+    roomRef.current?.close();
+    signalRef.current?.dispose();
+    roomRef.current = null;
+    signalRef.current = null;
+    setPeers([]);
+    setRole(null);
+    setCode("");
+    setTape("");
+    setAdvanced(false);
+    setNotice(null);
+    setStatus({ k: "hint" });
+    setStep(null);
+    haptics.tap();
+  };
+
+  const openSheet = () => {
+    setAdvanced(false);
+    if (role === "Host") setStep("host");
+    else if (role === "Join") setStep("join");
+    else setStep("choose");
+    haptics.tap();
+  };
+
   const linked = peers.filter((p) => p.connectionState === "connected").length;
+  const statusText = netStatusText(status, t);
+  const noticeText = netNoticeText(notice, t);
+  const joinReady = code.trim().length >= 4;
 
   return (
-    <div className="mt-4 max-w-xs rounded-xl border border-border bg-surface/80 p-3">
+    <div className="mt-4 max-w-xs">
       <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
         {t("wingman")}
       </p>
-      <label className="mt-2 block text-xs text-muted">
-        {t("roomCode")}
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          maxLength={8}
-          placeholder="ABC12"
-          autoCapitalize="characters"
-          autoCorrect="off"
-          spellCheck={false}
-          className="mt-1 h-10 w-full rounded-lg border border-border bg-bg px-3 font-display text-xl tracking-[0.2em] uppercase text-fg"
-        />
-      </label>
-      <div className="mt-2 flex gap-2">
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            host();
-          }}
-          className="h-10 flex-1 rounded-[14px] bg-fg text-sm font-medium text-bg"
-        >
-          {t("host")}
-        </button>
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            join();
-          }}
-          className="h-10 flex-1 rounded-[14px] border border-border bg-surface-2 text-sm text-fg"
-        >
-          {t("join")}
-        </button>
-      </div>
-      <p className="mt-2 text-xs text-muted">{status}</p>
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          openSheet();
+        }}
+        className="mt-2 h-10 w-full rounded-[14px] border border-border bg-surface/80 text-sm text-fg"
+      >
+        {t("wingmanCta")}
+      </button>
+      {role != null && <p className="mt-2 text-xs text-muted">{statusText}</p>}
       {linked > 0 && (
         <p className="mt-1 text-[10px] uppercase tracking-widest text-accent">
           {t("netLinkedCount", { n: linked })}
         </p>
       )}
-      <details className="mt-2 text-xs text-muted">
-        <summary className="cursor-pointer select-none">{t("netHandshakeSummary")}</summary>
-        <p className="mt-1 leading-snug">{t("netHandshakeHelp")}</p>
-        <textarea
-          value={tape}
-          onChange={(e) => setTape(e.target.value)}
-          rows={3}
-          className="mt-2 w-full resize-y rounded-lg border border-border bg-bg p-2 font-mono text-[10px] text-fg"
-        />
-        <div className="mt-1 flex gap-2">
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              void copyHandshake();
-            }}
-            className="h-8 flex-1 rounded-lg border border-border bg-surface-2"
-          >
-            {t("netCopyHandshake")}
-          </button>
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              applyHandshake();
-            }}
-            className="h-8 flex-1 rounded-lg border border-border bg-surface-2"
-          >
-            {t("netPasteHandshake")}
-          </button>
+      {role != null && (
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            leave();
+          }}
+          className="mt-1 text-xs text-muted underline"
+        >
+          {t("wingmanLeave")}
+        </button>
+      )}
+      {step != null && (
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center bg-bg/70 px-3 backdrop-blur-[2px] pointer-events-auto [touch-action:manipulation] sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("wingman")}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="mb-[max(0.75rem,env(safe-area-inset-bottom))] w-full max-w-sm rounded-2xl border border-border bg-surface p-4 shadow-lg sm:mb-0">
+            {step === "choose" && (
+              <>
+                <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
+                  {t("wingman")}
+                </p>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    beginHost();
+                  }}
+                  className="mt-3 flex h-16 w-full flex-col items-center justify-center rounded-[20px] bg-fg text-bg"
+                >
+                  <span className="text-base font-medium">{t("host")}</span>
+                  <span className="text-xs opacity-80">{t("wingmanHostBlurb")}</span>
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    beginJoin();
+                  }}
+                  className="mt-2 flex h-16 w-full flex-col items-center justify-center rounded-[20px] border border-border bg-surface-2 text-fg"
+                >
+                  <span className="text-base font-medium">{t("join")}</span>
+                  <span className="text-xs opacity-80">{t("wingmanJoinBlurb")}</span>
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setStep(null);
+                  }}
+                  className="mt-2 h-11 w-full rounded-[16px] text-sm text-muted"
+                >
+                  {t("wingmanCancel")}
+                </button>
+              </>
+            )}
+            {step === "host" && (
+              <>
+                <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
+                  {t("wingman")}
+                </p>
+                <h2 className="mt-1 font-display text-2xl tracking-tight">
+                  {t("wingmanHostTitle")}
+                </h2>
+                <p className="mt-3 text-center font-display text-4xl tracking-[0.18em] text-fg">
+                  {code}
+                </p>
+                <p className="mt-1 text-center text-xs text-muted">{t("wingmanHostHint")}</p>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    void copyCode();
+                  }}
+                  className="mt-3 h-12 w-full rounded-[20px] bg-fg font-medium text-bg"
+                >
+                  {t("wingmanCopyCode")}
+                </button>
+                {status.k !== "hint" && (
+                  <WingmanStatus statusText={statusText} noticeText={noticeText} linked={linked} />
+                )}
+                <WingmanTrouble
+                  advanced={advanced}
+                  tape={tape}
+                  onToggle={() => setAdvanced((open) => !open)}
+                  onTape={setTape}
+                  onCopy={() => void copyHandshake()}
+                  onApply={applyHandshake}
+                />
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setStep(null);
+                    }}
+                    className="h-11 flex-1 rounded-[16px] border border-border bg-surface-2 text-sm text-fg"
+                  >
+                    {t("wingmanClose")}
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      leave();
+                    }}
+                    className="h-11 flex-1 rounded-[16px] text-sm text-muted"
+                  >
+                    {t("wingmanLeave")}
+                  </button>
+                </div>
+              </>
+            )}
+            {step === "join" && (
+              <>
+                <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-faint">
+                  {t("wingman")}
+                </p>
+                <h2 className="mt-1 font-display text-2xl tracking-tight">
+                  {t("wingmanJoinTitle")}
+                </h2>
+                <input
+                  ref={joinInputRef}
+                  value={code}
+                  autoFocus
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  maxLength={8}
+                  placeholder="ABC12"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  aria-label={t("roomCode")}
+                  className="mt-3 h-14 w-full rounded-xl border border-border bg-bg px-3 text-center font-display text-3xl tracking-[0.2em] uppercase text-fg"
+                />
+                <button
+                  type="button"
+                  disabled={!joinReady}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    if (joinReady) join();
+                  }}
+                  className="mt-3 h-12 w-full rounded-[20px] bg-fg font-medium text-bg disabled:opacity-50"
+                >
+                  {t("wingmanJoinRoom")}
+                </button>
+                {status.k !== "hint" && (
+                  <WingmanStatus statusText={statusText} noticeText={noticeText} linked={linked} />
+                )}
+                <WingmanTrouble
+                  advanced={advanced}
+                  tape={tape}
+                  onToggle={() => setAdvanced((open) => !open)}
+                  onTape={setTape}
+                  onCopy={() => void copyHandshake()}
+                  onApply={applyHandshake}
+                />
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setStep(null);
+                    }}
+                    className="h-11 flex-1 rounded-[16px] border border-border bg-surface-2 text-sm text-fg"
+                  >
+                    {t("wingmanClose")}
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      leave();
+                    }}
+                    className="h-11 flex-1 rounded-[16px] text-sm text-muted"
+                  >
+                    {t("wingmanLeave")}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </details>
+      )}
+    </div>
+  );
+}
+
+function WingmanStatus({
+  statusText,
+  noticeText,
+  linked,
+}: {
+  statusText: string;
+  noticeText: string | null;
+  linked: number;
+}) {
+  const t = useT();
+  return (
+    <>
+      <p className="mt-2 text-xs text-muted">{statusText}</p>
+      {noticeText && <p className="mt-1 text-xs text-accent">{noticeText}</p>}
+      {linked > 0 && (
+        <p className="mt-1 text-[10px] uppercase tracking-widest text-accent">
+          {t("netLinkedCount", { n: linked })}
+        </p>
+      )}
+    </>
+  );
+}
+
+function WingmanTrouble({
+  advanced,
+  tape,
+  onToggle,
+  onTape,
+  onCopy,
+  onApply,
+}: {
+  advanced: boolean;
+  tape: string;
+  onToggle: () => void;
+  onTape: (value: string) => void;
+  onCopy: () => void;
+  onApply: () => void;
+}) {
+  const t = useT();
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        aria-expanded={advanced}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className="text-xs text-muted underline"
+      >
+        {t("wingmanTrouble")}
+      </button>
+      {advanced && (
+        <div className="mt-2 text-xs text-muted">
+          <p className="leading-snug">{t("netHandshakeHelp")}</p>
+          <textarea
+            value={tape}
+            onChange={(e) => onTape(e.target.value)}
+            rows={3}
+            className="mt-2 w-full resize-y rounded-lg border border-border bg-bg p-2 font-mono text-[10px] text-fg"
+          />
+          <div className="mt-1 flex gap-2">
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                onCopy();
+              }}
+              className="h-8 flex-1 rounded-lg border border-border bg-surface-2"
+            >
+              {t("netCopyHandshake")}
+            </button>
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                onApply();
+              }}
+              className="h-8 flex-1 rounded-lg border border-border bg-surface-2"
+            >
+              {t("netPasteHandshake")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -790,12 +1124,9 @@ function ShoutLayer({
   const [view, setView] = useState(() => captionView(createCaptionEngine()));
 
   useEffect(() => {
-    const now =
-      (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
+    const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
     const next = syncCaptionEngine(engineRef.current, shouts, now);
-    setView((prev) =>
-      prev.text === next.text && prev.pending === next.pending ? prev : next,
-    );
+    setView((prev) => (prev.text === next.text && prev.pending === next.pending ? prev : next));
   }, [shouts]);
 
   useEffect(() => {
@@ -804,9 +1135,7 @@ function ShoutLayer({
       const now = performance.now() / 1000;
       syncCaptionEngine(engine, shoutsRef.current, now);
       const next = captionView(engine);
-      setView((prev) =>
-        prev.text === next.text && prev.pending === next.pending ? prev : next,
-      );
+      setView((prev) => (prev.text === next.text && prev.pending === next.pending ? prev : next));
     }, 80);
     return () => window.clearInterval(id);
   }, []);
@@ -912,13 +1241,17 @@ function HudOverlay({
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <p
             className={`${chip} opacity-100 ${
-              hot ? "border-danger/40 bg-black/70 text-danger" : "border-white/20 bg-black/70 text-white"
+              hot
+                ? "border-danger/40 bg-black/70 text-danger"
+                : "border-white/20 bg-black/70 text-white"
             }`}
           >
             {t(ALERT_KEYS[alert.id] ?? "alertCalm")}
           </p>
           {hud.weaponTier > 0 && (
-            <p className={`${chip} border-white/20 bg-black/70 text-accent opacity-100`}>{weapon}</p>
+            <p className={`${chip} border-white/20 bg-black/70 text-accent opacity-100`}>
+              {weapon}
+            </p>
           )}
           {hud.cloakT > 0 && (
             <p className={`${chip} border-white/20 bg-black/70 text-white opacity-100`}>
@@ -979,7 +1312,14 @@ function UpgradeBay({
     reason: string;
     level: number;
     salvage: number;
-    stats: { abducted: number; destroyed: number; cows: number; people: number; buildings: number; vehicles: number } | null;
+    stats: {
+      abducted: number;
+      destroyed: number;
+      cows: number;
+      people: number;
+      buildings: number;
+      vehicles: number;
+    } | null;
   };
   onNext: () => void;
   onRetry: () => void;
@@ -1028,7 +1368,9 @@ function UpgradeBay({
                     {rank}/{u.max}
                   </span>
                 </p>
-                <p className="text-xs text-faint">{t(UPGRADE_KEYS[u.id]?.blurb ?? "upEnginesBlurb")}</p>
+                <p className="text-xs text-faint">
+                  {t(UPGRADE_KEYS[u.id]?.blurb ?? "upEnginesBlurb")}
+                </p>
               </div>
               <button
                 type="button"
@@ -1210,12 +1552,53 @@ function IconBtn({
   );
 }
 
+function HangarLang() {
+  const lang = useI18n((s) => s.lang);
+  const setLang = useI18n((s) => s.setLang);
+  const t = useT();
+  const pick = (next: Lang) => {
+    if (lang === next) return;
+    setLang(next);
+    haptics.tap();
+  };
+  return (
+    <div
+      role="group"
+      aria-label={t("language")}
+      className="flex h-8 max-h-10 shrink-0 overflow-hidden rounded-full border border-border bg-surface/80 text-xs font-medium"
+    >
+      <button
+        type="button"
+        aria-pressed={lang === "en"}
+        aria-label={t("english")}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          pick("en");
+        }}
+        className={`h-8 px-3 ${lang === "en" ? "bg-fg text-bg" : "text-fg"}`}
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        aria-pressed={lang === "es"}
+        aria-label={t("spanish")}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          pick("es");
+        }}
+        className={`h-8 px-3 ${lang === "es" ? "bg-fg text-bg" : "text-fg"}`}
+      >
+        ES
+      </button>
+    </div>
+  );
+}
+
 function LanguagePicker({ onPick }: { onPick: (lang: Lang) => void }) {
   return (
     <Overlay>
-      <h2 className="font-display text-5xl tracking-tight landscape:text-4xl">
-        Language · Idioma
-      </h2>
+      <h2 className="font-display text-5xl tracking-tight landscape:text-4xl">Language · Idioma</h2>
       <div className="mt-6 flex flex-col gap-2 landscape:mt-4">
         <Primary icon={false} onClick={() => onPick("en")}>
           English
@@ -1247,9 +1630,7 @@ function LangSwitch() {
             }
           }}
           className={`h-10 flex-1 rounded-[14px] text-sm font-medium ${
-            lang === "en"
-              ? "bg-fg text-bg"
-              : "border border-border bg-surface-2 text-fg"
+            lang === "en" ? "bg-fg text-bg" : "border border-border bg-surface-2 text-fg"
           }`}
         >
           English
@@ -1265,9 +1646,7 @@ function LangSwitch() {
             }
           }}
           className={`h-10 flex-1 rounded-[14px] text-sm font-medium ${
-            lang === "es"
-              ? "bg-fg text-bg"
-              : "border border-border bg-surface-2 text-fg"
+            lang === "es" ? "bg-fg text-bg" : "border border-border bg-surface-2 text-fg"
           }`}
         >
           Español
@@ -1311,13 +1690,7 @@ function Primary({
   );
 }
 
-function Ghost({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
+function Ghost({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
     <button
       type="button"

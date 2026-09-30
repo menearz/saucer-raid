@@ -230,8 +230,12 @@ export function alertFromHeat(heat: number): Alert {
 
 export const HUMAN_SHOUT_MAX = 2;
 export const AHH_NOT_AGAIN = "AHH NOT AGAIN";
-/** First person/farmer shout is usually this exact line. Never used for cattle. */
-export const AHH_FIRST_SHOUT_CHANCE = 0.72;
+/** First person/farmer shout is sometimes this gag. Never used for cattle. */
+export const AHH_FIRST_SHOUT_CHANCE = 0.28;
+/** Shown human lines kept so the next picks can skip them. */
+export const RECENT_HUMAN_LINES = 8;
+/** Extra draws `pickHumanLine` may take to dodge the recent ring. */
+export const HUMAN_LINE_AVOID_RETRIES = 6;
 
 export function canHumanShout(shouted?: number | boolean): boolean {
   const n = typeof shouted === "number" ? shouted : shouted ? 1 : 0;
@@ -289,10 +293,55 @@ export const HUMAN_LINES = [
   "That's my lunch!",
   "We voted no aliens!",
   "I just mopped!",
+  "Wrong planet, bud!",
+  "I left the stove on!",
+  "Not the Sunday pants!",
+  "Granny's watchin'!",
+  "I just flossed!",
+  "Take Bob — he's louder!",
+  "This ain't Area 51!",
+  "I rented this suit!",
+  "Put me by the silo!",
+  "My podcast's live!",
+  "Don't eat the hat!",
+  "I paid for parking!",
+  "The fence was locked!",
+  "Mom said no beams!",
+  "I got a coupon!",
+  "Alien HOA violation!",
 ];
 
-/** People/farmers only. `shoutIndex` 0 is the first grab — usually AHH NOT AGAIN. */
-export function pickHumanLine(shoutIndex: number, rng: () => number = Math.random): string {
-  if (shoutIndex <= 0 && rng() < AHH_FIRST_SHOUT_CHANCE) return AHH_NOT_AGAIN;
+const recentHumanLines: string[] = [];
+
+export function resetRecentHumanLines(): void {
+  recentHumanLines.length = 0;
+}
+
+export function shownHumanLines(): readonly string[] {
+  return recentHumanLines;
+}
+
+function rememberHumanLine(line: string) {
+  const at = recentHumanLines.indexOf(line);
+  if (at >= 0) recentHumanLines.splice(at, 1);
+  recentHumanLines.push(line);
+  while (recentHumanLines.length > RECENT_HUMAN_LINES) recentHumanLines.shift();
+}
+
+function drawHumanLine(rng: () => number): string {
   return HUMAN_LINES[(rng() * HUMAN_LINES.length) | 0]!;
+}
+
+/** People/farmers only. `shoutIndex` 0 may be the AHH gag; later lines skip the recent ring. */
+export function pickHumanLine(shoutIndex: number, rng: () => number = Math.random): string {
+  if (shoutIndex <= 0 && rng() < AHH_FIRST_SHOUT_CHANCE) {
+    rememberHumanLine(AHH_NOT_AGAIN);
+    return AHH_NOT_AGAIN;
+  }
+  let line = drawHumanLine(rng);
+  for (let n = 0; n < HUMAN_LINE_AVOID_RETRIES && recentHumanLines.includes(line); n++) {
+    line = drawHumanLine(rng);
+  }
+  rememberHumanLine(line);
+  return line;
 }

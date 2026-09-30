@@ -16,10 +16,7 @@ test("hangar pitch is the spec copy, above Launch, no extra splash", () => {
     "Stick or WASD to fly. Hold Beam to grab. Hold Fire to shoot. Beat the clock.",
   );
   assert.equal(ES.pitchLead, "Tú eres el platillo.");
-  assert.equal(
-    ES.pitchFly,
-    "Vuela la granja. Absorbe vacas y gente. Dispara a lo que te dispara.",
-  );
+  assert.equal(ES.pitchFly, "Vuela la granja. Absorbe vacas y gente. Dispara a lo que te dispara.");
   assert.equal(
     ES.pitchControls,
     "Stick o WASD para volar. Mantén Beam para agarrar. Mantén Fire para disparar. Gana al reloj.",
@@ -54,4 +51,15 @@ test("hangar primary button is Launch, not Play or Launch sector", () => {
   assert.doesNotMatch(HUD, /Launch sector/);
   assert.doesNotMatch(HUD, />Play</);
   assert.match(HUD, /<HangarPreview/);
+  assert.match(HUD, /h-\[min\(26dvh,12rem\)\]/);
+  assert.match(HUD, /bg-bg\/55 backdrop-blur-sm rounded-2xl px-3 py-2/);
+  const title = HUD.slice(
+    HUD.indexOf("function TitleScreen"),
+    HUD.indexOf("function HangarWordmark"),
+  );
+  assert.match(title, /<HangarLang/);
+  assert.doesNotMatch(title, /<LangSwitch/);
+  const lang = title.indexOf("<HangarLang");
+  const launch = title.indexOf("<LaunchButton");
+  assert.ok(lang >= 0 && launch > lang, "language control sits in the hangar header, above Launch");
 });
