@@ -128,8 +128,14 @@ export function SaucerRaid() {
     handleRef.current?.start(kind);
   };
 
+  // flushHud republishes world.state.phase, so a store-only write snaps back to the bay.
   const toTitle = () => {
     inputRef.current.reset();
+    const handle = handleRef.current;
+    if (handle) {
+      handle.toHangar();
+      return;
+    }
     useHud.setState({
       phase: "title",
       level: loadProgress().level,

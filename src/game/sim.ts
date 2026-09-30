@@ -530,6 +530,13 @@ export function smashNearestSpecial(w: World) {
   return true;
 }
 
+/** Leave the upgrade bay for the title hangar. Saved level, salvage, and craft stay put. */
+export function returnToHangar(w: World) {
+  if (w.state.phase !== "upgrade") return;
+  w.state.phase = "title";
+  w.beamOn = false;
+}
+
 export function startRaid(w: World, kind: "start" | "next" | "retry" = "start") {
   const p = loadProgress();
   if (kind === "next") {
