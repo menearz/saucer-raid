@@ -33,6 +33,8 @@ const PATHS = {
     "craft-ember",
     "craft-keel",
     "craft-wake",
+    "craft-lantern",
+    "craft-anvil",
     "special-armory",
     "special-cloak",
     "pickup-weapon",

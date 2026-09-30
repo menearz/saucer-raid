@@ -22,6 +22,8 @@ test("non-disc hulls draw craft.sprite, not Classic Disc frames", () => {
   assert.equal(hullSpriteName("ember", "craft-ember", 1), "craft-ember");
   assert.equal(hullSpriteName("keel", "craft-keel", 2), "craft-keel");
   assert.equal(hullSpriteName("wake", "craft-wake", 0), "craft-wake");
+  assert.equal(hullSpriteName("lantern", "craft-lantern", 1), "craft-lantern");
+  assert.equal(hullSpriteName("anvil", "craft-anvil", 2), "craft-anvil");
 });
 
 test("canvas raid uses hullSpriteName instead of always art.saucer[fi]", () => {

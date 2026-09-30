@@ -13,6 +13,7 @@ import {
   pickHumanLine,
   ROWS,
 } from "../src/game/types.ts";
+import { CRAFTS, cycleCraftId } from "../src/game/crafts.ts";
 import {
   BOSS_COMBAT,
   BOSS_FIGHT,
@@ -146,6 +147,8 @@ const PLAYER_SPRITES = [
   "craft-ember",
   "craft-keel",
   "craft-wake",
+  "craft-lantern",
+  "craft-anvil",
 ];
 
 test("rival never uses the player's selected hull, including Classic Disc", () => {
@@ -233,7 +236,7 @@ test("boss cutscene hard-locks input, ignores pause, soft-freezes combat", () =>
   assert.match(LOOP, /justPause && !cutscene/);
 });
 
-test("hangar keeps the six original hull names", () => {
+test("hangar keeps the six original hull names plus Lantern and Anvil", () => {
   const crafts = readFileSync(join(ROOT, "src/game/crafts.ts"), "utf8");
   for (const name of [
     "Classic Disc",
@@ -242,10 +245,58 @@ test("hangar keeps the six original hull names", () => {
     "Long Ember",
     "Pale Keel",
     "Twin Wake",
+    "Lantern",
+    "Anvil",
   ]) {
     assert.match(crafts, new RegExp(`name:\\s*"${name}"`));
   }
   assert.doesNotMatch(crafts, /Falcon|Destroyer|Enterprise|Normandy|Viper|Millennium/i);
+  assert.doesNotMatch(crafts, /coming soon|locked/i);
+
+  const ids = CRAFTS.map((c) => c.id);
+  assert.deepEqual(ids, ["disc", "yoke", "spike", "ember", "keel", "wake", "lantern", "anvil"]);
+  assert.equal(cycleCraftId("wake", 1), "lantern");
+  assert.equal(cycleCraftId("lantern", 1), "anvil");
+  assert.equal(cycleCraftId("anvil", 1), "disc");
+  assert.equal(cycleCraftId("disc", -1), "anvil");
+
+  const lantern = CRAFTS.find((c) => c.id === "lantern");
+  const anvil = CRAFTS.find((c) => c.id === "anvil");
+  assert.ok(lantern && anvil);
+  assert.equal(lantern.tag, "Beam");
+  assert.equal(lantern.blurb, "Wide tractor. Soft guns. The dish stays kind.");
+  assert.equal(lantern.speed, 250);
+  assert.equal(lantern.hp, 5);
+  assert.equal(lantern.beam, 120);
+  assert.equal(lantern.laser, 0.7);
+  assert.equal(lantern.fireRate, 0.11);
+  assert.equal(lantern.heatMult, 1.2);
+  assert.equal(lantern.w, 120);
+  assert.equal(lantern.h, 80);
+  assert.equal(lantern.sprite, "craft-lantern");
+  assert.equal(lantern.portrait, "hangar-lantern");
+  assert.equal(lantern.animated, false);
+  assert.equal(anvil.tag, "Siege");
+  assert.equal(anvil.blurb, "Slow. Thick hull. A heavy gun.");
+  assert.equal(anvil.speed, 190);
+  assert.equal(anvil.hp, 11);
+  assert.equal(anvil.beam, 70);
+  assert.equal(anvil.laser, 1.4);
+  assert.equal(anvil.fireRate, 0.16);
+  assert.equal(anvil.heatMult, 1.5);
+  assert.equal(anvil.w, 130);
+  assert.equal(anvil.h, 90);
+  assert.equal(anvil.sprite, "craft-anvil");
+  assert.equal(anvil.portrait, "hangar-anvil");
+  assert.equal(anvil.animated, false);
+
+  const assets = readFileSync(join(ROOT, "src/game/assets.ts"), "utf8");
+  assert.match(assets, /"craft-lantern"/);
+  assert.match(assets, /"craft-anvil"/);
+  const hud = readFileSync(join(ROOT, "src/components/game/SaucerRaid.tsx"), "utf8");
+  assert.match(hud, /CRAFTS\.map\(\(c\)/);
+  assert.match(hud, /cycleCraftId\(craftId, -1\)/);
+  assert.match(hud, /cycleCraftId\(craftId, 1\)/);
 });
 
 test("world seeds maps and the sim plays the exact boss beat", () => {

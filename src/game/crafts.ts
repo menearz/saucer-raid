@@ -1,4 +1,4 @@
-export type CraftId = "disc" | "yoke" | "spike" | "ember" | "keel" | "wake";
+export type CraftId = "disc" | "yoke" | "spike" | "ember" | "keel" | "wake" | "lantern" | "anvil";
 
 const RETIRED = new Set(["scout", "barge", "phantom"]);
 
@@ -128,6 +128,42 @@ export const CRAFTS: Craft[] = [
     r: 36,
     sprite: "craft-wake",
     portrait: "hangar-wake",
+    animated: false,
+  },
+  {
+    id: "lantern",
+    name: "Lantern",
+    tag: "Beam",
+    blurb: "Wide tractor. Soft guns. The dish stays kind.",
+    speed: 250,
+    hp: 5,
+    beam: 120,
+    laser: 0.7,
+    fireRate: 0.11,
+    heatMult: 1.2,
+    w: 120,
+    h: 80,
+    r: 36,
+    sprite: "craft-lantern",
+    portrait: "hangar-lantern",
+    animated: false,
+  },
+  {
+    id: "anvil",
+    name: "Anvil",
+    tag: "Siege",
+    blurb: "Slow. Thick hull. A heavy gun.",
+    speed: 190,
+    hp: 11,
+    beam: 70,
+    laser: 1.4,
+    fireRate: 0.16,
+    heatMult: 1.5,
+    w: 130,
+    h: 90,
+    r: 40,
+    sprite: "craft-anvil",
+    portrait: "hangar-anvil",
     animated: false,
   },
 ];

@@ -24,7 +24,7 @@ const {
   ranksFor,
   upgradeCost,
 } = await import("../src/game/progress.ts");
-const { saveCraftId } = await import("../src/game/crafts.ts");
+const { loadCraftId, saveCraftId } = await import("../src/game/crafts.ts");
 
 test("source: upgradesByCraft + ranksFor + per-craft buyUpgrade", () => {
   assert.match(PROGRESS, /upgradesByCraft/);
@@ -84,4 +84,44 @@ test("buyUpgrade is per-ship; swap craft shows zeros then restores", () => {
   assert.equal(ranksFor(p, "disc").engines, 2);
   assert.equal(p.upgrades.engines, 2);
   assert.equal(ranksFor(p, "wake").armor, 1);
+});
+
+test("lantern and anvil start empty and do not copy another ship's ranks", () => {
+  store.clear();
+  saveCraftId("disc");
+  let p = emptyProgress();
+  p.salvage = 400;
+  p = buyUpgrade(p, "disc", "engines");
+  p = buyUpgrade(p, "disc", "engines");
+  const empty = { engines: 0, tractor: 0, armor: 0, shields: 0, weapons: 0 };
+  assert.deepEqual(ranksFor(p, "lantern"), empty);
+  assert.deepEqual(ranksFor(p, "anvil"), empty);
+  assert.equal(ranksFor(p, "disc").engines, 2);
+
+  saveCraftId("lantern");
+  p = normalizeProgress(p);
+  assert.equal(p.upgrades.engines, 0);
+  p.salvage = 400;
+  p = buyUpgrade(p, "lantern", "weapons");
+  assert.equal(ranksFor(p, "lantern").weapons, 1);
+  assert.deepEqual(ranksFor(p, "anvil"), empty);
+  assert.equal(ranksFor(p, "disc").engines, 2);
+
+  saveCraftId("anvil");
+  p = normalizeProgress(p);
+  assert.equal(ranksFor(p, "anvil").weapons, 0);
+  assert.equal(p.upgrades.weapons, 0);
+  assert.equal(ranksFor(p, "lantern").weapons, 1);
+});
+
+test("lantern and anvil save; retired scout, barge, and phantom stay disc", () => {
+  store.clear();
+  saveCraftId("lantern");
+  assert.equal(loadCraftId(), "lantern");
+  saveCraftId("anvil");
+  assert.equal(loadCraftId(), "anvil");
+  for (const retired of ["scout", "barge", "phantom"]) {
+    store.set("saucer-raid-craft", retired);
+    assert.equal(loadCraftId(), "disc");
+  }
 });
