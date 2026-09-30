@@ -2,7 +2,14 @@ import { audio } from "./audio";
 import type { CraftId } from "./crafts";
 import { createGlRenderer } from "./gl";
 import type { Input } from "./input";
-import { smashNearestSpecial, startRaid, step, screenToWorld, worldToScreen } from "./sim";
+import {
+  returnToHangar,
+  smashNearestSpecial,
+  startRaid,
+  step,
+  screenToWorld,
+  worldToScreen,
+} from "./sim";
 import { patchHud } from "./store";
 import { loadBest, type World } from "./world";
 import { loadProgress, type MapMark } from "./progress";
@@ -16,6 +23,8 @@ export type GameHandle = {
   start: (kind?: "start" | "next" | "retry") => void;
   pause: () => void;
   resume: () => void;
+  /** Upgrade bay → title hangar. Must update world phase; the HUD copy is overwritten each flush. */
+  toHangar: () => void;
   world: World;
 };
 
@@ -208,6 +217,12 @@ export function runGame(
       startRaid(world, kind);
       last = performance.now();
       acc = 0;
+      flushHud();
+    },
+    toHangar() {
+      returnToHangar(world);
+      input.reset();
+      audio.stopBeam();
       flushHud();
     },
     pause() {
