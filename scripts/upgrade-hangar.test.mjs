@@ -73,3 +73,64 @@ test("upgrade bay Hangar is wired through the world phase, not only the HUD stor
   assert.ok(ret >= 0 && flush > ret, "world phase updates before the hud flush");
   assert.match(LOOP, /phase:\s*st\.phase/);
 });
+
+test("pause Hangar leaves an in-progress raid on the title hangar", () => {
+  const returnToHangar = new Function("w", functionBody(SIM, "returnToHangar"));
+  const body = functionBody(SIM, "returnToHangar");
+  assert.doesNotMatch(body, /resetProgress|saveProgress|craftId/);
+
+  const paused = {
+    state: { phase: "paused", reason: "", level: 7, score: 40 },
+    beamOn: true,
+  };
+  // A click that only writes the HUD store is overwritten on the next flush,
+  // which copies world.state.phase back. The world phase has to become title.
+  const hudOnly = { phase: "title" };
+  const flushed = paused.state.phase;
+  assert.notEqual(hudOnly.phase, flushed);
+
+  returnToHangar(paused);
+  const shown = paused.state.phase;
+  assert.equal(shown, "title");
+  assert.equal(paused.state.level, 7);
+  assert.equal(paused.state.score, 40);
+  assert.equal(paused.beamOn, false);
+});
+
+test("pause Hangar is wired through the world phase, not only the HUD store", () => {
+  const pause = sliceBetween(HUD, 'hud.phase === "paused"', 'hud.phase === "upgrade"');
+  const resume = pause.indexOf('{t("resume")}');
+  const restart = pause.indexOf('{t("restartRaid")}');
+  const hangar = pause.indexOf('{t("hangar")}');
+  const lang = pause.indexOf("<LangSwitch");
+  assert.ok(
+    resume >= 0 && restart > resume && hangar > restart && lang > hangar,
+    "order is Resume → Restart Raid → Hangar → Lang",
+  );
+  assert.match(pause, /<Ghost onClick=\{toTitle\}>\{t\("hangar"\)\}<\/Ghost>/);
+  assert.doesNotMatch(pause, /useHud\.setState/);
+  assert.doesNotMatch(pause, /phase:\s*"title"/);
+
+  const toTitle = sliceBetween(HUD, "const toTitle", "const toggleMute");
+  assert.match(toTitle, /handle\.toHangar\(\)/);
+
+  const playingHud = sliceBetween(HUD, "function HudOverlay(", "function MiniMap(");
+  assert.doesNotMatch(playingHud, /t\("hangar"\)/);
+});
+
+test("raid HUD drops the full-width plate and keeps overlay chrome", () => {
+  const hud = sliceBetween(HUD, "function HudOverlay(", "function MiniMap(");
+  assert.match(hud, /pointer-events-none absolute inset-x-0 top-0 z-10/);
+  assert.match(hud, /env\(safe-area-inset-top\)/);
+  assert.doesNotMatch(hud, /rounded-xl/);
+  assert.doesNotMatch(hud, /bg-bg\/75/);
+  assert.doesNotMatch(hud, /backdrop-blur/);
+  assert.doesNotMatch(hud, /border-white\/10/);
+  assert.doesNotMatch(hud, /bg-bg\/\d+/);
+  assert.match(hud, /textShadow: "0 1px 2px #000, 0 0 6px #000"/);
+  assert.match(hud, /style=\{metaShadow\}\s*>\s*\{hud\.score\}/);
+  assert.match(hud, /style=\{metaShadow\}\s*>\s*\{m\}:\{s\}/);
+  assert.match(hud, /hud\.combo > 1/);
+  assert.match(hud, /h-1\.5[^"]*bg-black\/40/);
+  assert.match(hud, /bg-black\/70/);
+});

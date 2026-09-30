@@ -188,6 +188,7 @@ export function SaucerRaid() {
               {t("resume")}
             </Primary>
             <Ghost onClick={() => begin("retry")}>{t("restartRaid")}</Ghost>
+            <Ghost onClick={toTitle}>{t("hangar")}</Ghost>
             <LangSwitch />
           </div>
         </Overlay>
@@ -1197,74 +1198,76 @@ function HudOverlay({
   const metaShadow = { textShadow: "0 1px 2px #000, 0 0 6px #000" };
   const chip =
     "inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide";
+  const pip = "h-2 w-2 rounded-full shadow-[0_0_0_1px_#000]";
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))]">
-      <div className="rounded-xl border border-white/10 bg-bg/75 px-2.5 py-2 backdrop-blur-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-display text-4xl leading-none tabular-nums landscape:text-3xl">
-              {hud.score}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p
+            className="font-display text-4xl leading-none tabular-nums landscape:text-3xl"
+            style={metaShadow}
+          >
+            {hud.score}
+          </p>
+          <p className="text-xs font-semibold text-fg" style={metaShadow}>
+            {t("sector", { n: hud.level })}
+          </p>
+          {hud.combo > 1 && (
+            <p className="text-xs font-semibold text-accent" style={metaShadow}>
+              {t("combo", { n: hud.combo })}
             </p>
-            <p className="text-xs font-semibold text-fg" style={metaShadow}>
-              {t("sector", { n: hud.level })}
-            </p>
-            {hud.combo > 1 && (
-              <p className="text-xs font-semibold text-accent">{t("combo", { n: hud.combo })}</p>
-            )}
-          </div>
-          <div className="text-right">
-            <p className="font-display text-3xl leading-none tabular-nums landscape:text-2xl">
-              {m}:{s}
-            </p>
-            <p className="text-xs font-semibold text-fg" style={metaShadow}>
-              {t("takenWrecked", { a: hud.abducted, d: hud.destroyed })}
-            </p>
-          </div>
+          )}
         </div>
-        <div className="mt-2 flex items-center gap-2 landscape:mt-1">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-            <div
-              className={`h-full rounded-full transition-[width] duration-150 ${hot ? "bg-danger" : "bg-accent"}`}
-              style={{ width: `${Math.min(100, hud.heat)}%` }}
-            />
-          </div>
-          <div className="flex gap-1">
-            {Array.from({ length: hud.maxHp }).map((_, i) => (
+        <div className="text-right landscape:pr-[6.25rem]">
+          <p
+            className="font-display text-3xl leading-none tabular-nums landscape:text-2xl"
+            style={metaShadow}
+          >
+            {m}:{s}
+          </p>
+          <p className="text-xs font-semibold text-fg" style={metaShadow}>
+            {t("takenWrecked", { a: hud.abducted, d: hud.destroyed })}
+          </p>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-2 landscape:mt-1">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/40">
+          <div
+            className={`h-full rounded-full transition-[width] duration-150 ${hot ? "bg-danger" : "bg-accent"}`}
+            style={{ width: `${Math.min(100, hud.heat)}%` }}
+          />
+        </div>
+        <div className="flex gap-1">
+          {Array.from({ length: hud.maxHp }).map((_, i) => (
+            <span key={i} className={`${pip} ${i < hud.hp ? "bg-accent" : "bg-surface-2"}`} />
+          ))}
+          {hud.shieldMax > 0 &&
+            Array.from({ length: Math.ceil(hud.shieldMax) }).map((_, i) => (
               <span
-                key={i}
-                className={`h-2 w-2 rounded-full ${i < hud.hp ? "bg-accent" : "bg-surface-2"}`}
+                key={`s${i}`}
+                className={`${pip} ${i < hud.shield ? "bg-warn" : "bg-surface-2"}`}
               />
             ))}
-            {hud.shieldMax > 0 &&
-              Array.from({ length: Math.ceil(hud.shieldMax) }).map((_, i) => (
-                <span
-                  key={`s${i}`}
-                  className={`h-2 w-2 rounded-full ${i < hud.shield ? "bg-warn" : "bg-surface-2"}`}
-                />
-              ))}
-          </div>
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <p
-            className={`${chip} opacity-100 ${
-              hot
-                ? "border-danger/40 bg-black/70 text-danger"
-                : "border-white/20 bg-black/70 text-white"
-            }`}
-          >
-            {t(ALERT_KEYS[alert.id] ?? "alertCalm")}
+      </div>
+      <div className="mt-1.5 flex w-fit max-w-full flex-wrap items-center gap-1.5">
+        <p
+          className={`${chip} opacity-100 ${
+            hot
+              ? "border-danger/40 bg-black/70 text-danger"
+              : "border-white/20 bg-black/70 text-white"
+          }`}
+        >
+          {t(ALERT_KEYS[alert.id] ?? "alertCalm")}
+        </p>
+        {hud.weaponTier > 0 && (
+          <p className={`${chip} border-white/20 bg-black/70 text-accent opacity-100`}>{weapon}</p>
+        )}
+        {hud.cloakT > 0 && (
+          <p className={`${chip} border-white/20 bg-black/70 text-white opacity-100`}>
+            {t("cloak", { t: hud.cloakT.toFixed(1) })}
           </p>
-          {hud.weaponTier > 0 && (
-            <p className={`${chip} border-white/20 bg-black/70 text-accent opacity-100`}>
-              {weapon}
-            </p>
-          )}
-          {hud.cloakT > 0 && (
-            <p className={`${chip} border-white/20 bg-black/70 text-white opacity-100`}>
-              {t("cloak", { t: hud.cloakT.toFixed(1) })}
-            </p>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
@@ -1431,7 +1434,7 @@ function TouchLayer({
 
   return (
     <>
-      <div className="absolute top-[max(4.5rem,calc(env(safe-area-inset-top)+3.6rem))] right-[max(0.75rem,env(safe-area-inset-right))] z-20 flex gap-2 landscape:top-[max(0.45rem,env(safe-area-inset-top))] landscape:right-[max(5.5rem,calc(env(safe-area-inset-right)+4.75rem))]">
+      <div className="absolute top-[max(4.5rem,calc(env(safe-area-inset-top)+3.6rem))] right-[max(0.75rem,env(safe-area-inset-right))] z-20 flex gap-2 landscape:top-[max(0.45rem,env(safe-area-inset-top))]">
         <IconBtn onClick={onMute} label={muted ? t("unmute") : t("mute")}>
           {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
         </IconBtn>
