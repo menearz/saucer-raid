@@ -13,6 +13,8 @@ export type Progress = {
   /** Mirror of selected craft ranks (compat); prefer ranksFor. */
   upgrades: UpgradeRanks;
   upgradesByCraft: Partial<Record<CraftId, UpgradeRanks>>;
+  /** Best quota-clear time in seconds, keyed by level. Lower is better. */
+  bestTimes: Record<string, number>;
 };
 
 export const UPGRADES: {
@@ -41,7 +43,21 @@ export function emptyProgress(): Progress {
     runScore: 0,
     upgrades: emptyRanks(),
     upgradesByCraft: {},
+    bestTimes: {},
   };
+}
+
+function readBestTimes(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const level = Number(k);
+    const t = typeof v === "number" ? v : Number(v);
+    if (!Number.isInteger(level) || level < 1) continue;
+    if (!Number.isFinite(t) || t < 0) continue;
+    out[String(level)] = t;
+  }
+  return out;
 }
 
 export function ranksFor(p: Progress, craftId: CraftId): UpgradeRanks {
@@ -67,6 +83,7 @@ export function normalizeProgress(raw: Partial<Progress> & { upgrades?: UpgradeR
     runScore: Math.max(0, raw.runScore || 0),
     upgrades: selected,
     upgradesByCraft: byCraft,
+    bestTimes: readBestTimes(raw.bestTimes),
   };
 }
 
@@ -132,8 +149,55 @@ export function awardSalvage(p: Progress, score: number, survived: boolean): Pro
   return next;
 }
 
+/**
+ * Legacy survival-clock length. Not the live raid timer and not a fail condition.
+ * Kept so the old curve stays inspectable. Par time is `parSec`.
+ */
 export function raidSeconds(level: number) {
   return Math.max(70, 102 - (level - 1) * 4);
+}
+
+/** Abduct quota. Exact spec curve: 400 + (level - 1) * 120. Not tuned. */
+export function raidGoal(level: number) {
+  const lv = Math.max(1, level);
+  return 400 + (lv - 1) * 120;
+}
+
+/**
+ * Time-attack par in seconds. Grows with the quota: 90 + level * 2.
+ * The old `raidSeconds` curve shrinks and was a countdown, so it is not the par.
+ */
+export function parSec(level: number) {
+  const lv = Math.max(1, level);
+  return 90 + lv * 2;
+}
+
+/** Points added to score (and thus salvage) per second under par. Over par pays 0. */
+export const TIME_BONUS_PER_SEC = 5;
+
+export function timeBonusFor(level: number, elapsed: number) {
+  const t = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
+  return Math.max(0, Math.round((parSec(level) - t) * TIME_BONUS_PER_SEC));
+}
+
+export function formatClock(seconds: number) {
+  const safe = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+  const m = Math.floor(safe / 60);
+  const s = Math.floor(safe % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+/** Record a quota clear. Keeps the faster time. No-op when this run is slower. */
+export function noteBestClear(p: Progress, level: number, elapsed: number): Progress {
+  const key = String(Math.max(1, Math.floor(level)));
+  const t = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
+  const prev = p.bestTimes?.[key];
+  if (prev != null && prev <= t) return p;
+  const next: Progress = { ...p, bestTimes: { ...p.bestTimes, [key]: t } };
+  saveProgress(next);
+  return next;
 }
 
 /**

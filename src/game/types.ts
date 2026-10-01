@@ -125,7 +125,12 @@ export type Stats = {
 
 export type GameState = {
   phase: Phase;
-  timeLeft: number;
+  /** Seconds played. Counts up. Boss-talk cutscenes pause it. Never a fail clock. */
+  elapsed: number;
+  /** Abduct quota for this level. Clear when score >= goal. */
+  goal: number;
+  /** Salvage-side bonus applied once on quota clear. 0 when over par or not cleared. */
+  timeBonus: number;
   score: number;
   combo: number;
   comboTimer: number;
@@ -140,7 +145,7 @@ export type GameState = {
   nextId: number;
   seed: number;
   stats: Stats;
-  reason: "time" | "destroyed" | "";
+  reason: "quota" | "destroyed" | "";
   alert: Alert;
   craftId: string;
   beamR: number;
@@ -161,20 +166,36 @@ export const COLS = 68;
 export const ROWS = 50;
 export const WORLD_W = COLS * TILE;
 export const WORLD_H = ROWS * TILE;
-export const RAID_TIME = 100;
 export const PLAYER_SPEED = 330;
 export const BEAM_RADIUS = 82;
 export const LASER_SPEED = 680;
 export const LASER_RATE = 0.085;
 export const MAX_HP = 5;
 
+/** Abduct points that count toward the raid quota. Anything else is 0. */
+export const QUOTA_POINTS = {
+  chicken: 25,
+  pig: 50,
+  sheep: 75,
+  cow: 100,
+  farmer: 200,
+  civilian: 200,
+} as const;
+
+export function quotaPoints(kind: string): number {
+  if (Object.prototype.hasOwnProperty.call(QUOTA_POINTS, kind)) {
+    return QUOTA_POINTS[kind as keyof typeof QUOTA_POINTS];
+  }
+  return 0;
+}
+
 export const POINTS: Record<string, number> = {
-  cow: 250,
-  pig: 180,
-  sheep: 160,
-  chicken: 80,
-  farmer: 420,
-  civilian: 380,
+  cow: QUOTA_POINTS.cow,
+  pig: QUOTA_POINTS.pig,
+  sheep: QUOTA_POINTS.sheep,
+  chicken: QUOTA_POINTS.chicken,
+  farmer: QUOTA_POINTS.farmer,
+  civilian: QUOTA_POINTS.civilian,
   tractor: 320,
   pickup: 300,
   sedan: 240,
