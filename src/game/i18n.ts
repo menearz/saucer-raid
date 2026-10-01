@@ -93,6 +93,10 @@ export const EN = {
   fire: "Fire",
 
   sectorCleared: "Sector {n} cleared",
+  quotaClear: "Quota filled",
+  clearTime: "Clear time {t}",
+  timeBonus: "Time bonus +{n}",
+  goalLabel: "{score} / {goal}",
   saucerDown: "Saucer down",
   upgradeBay: "Upgrade bay",
   refit: "Refit",
@@ -221,6 +225,10 @@ export const ES: Record<MsgKey, string> = {
   fire: "Fire",
 
   sectorCleared: "Sector {n} despejado",
+  quotaClear: "Cupo lleno",
+  clearTime: "Tiempo {t}",
+  timeBonus: "Bonus de tiempo +{n}",
+  goalLabel: "{score} / {goal}",
   saucerDown: "Platillo derribado",
   upgradeBay: "Bahía de mejoras",
   refit: "Reequipar",

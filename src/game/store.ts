@@ -9,14 +9,16 @@ export type HudSlice = {
   score: number;
   combo: number;
   heat: number;
-  timeLeft: number;
+  elapsed: number;
+  goal: number;
+  timeBonus: number;
   hp: number;
   maxHp: number;
   abducted: number;
   destroyed: number;
   best: number;
   stats: Stats | null;
-  reason: "time" | "destroyed" | "";
+  reason: "quota" | "destroyed" | "";
   alert: Alert;
   craftId: CraftId;
   shouts: Shout[];
@@ -34,7 +36,9 @@ const empty: HudSlice = {
   score: 0,
   combo: 0,
   heat: 0,
-  timeLeft: 100,
+  elapsed: 0,
+  goal: 400,
+  timeBonus: 0,
   hp: 5,
   maxHp: 5,
   abducted: 0,

@@ -1,5 +1,5 @@
-import { WORLD_H, WORLD_W, type Actor } from "./types";
-import type { World } from "./world";
+import { WORLD_H, WORLD_W, type Actor } from "./types.ts";
+import type { World } from "./world.ts";
 
 const CELL = 96;
 const MASS: Record<string, number> = {

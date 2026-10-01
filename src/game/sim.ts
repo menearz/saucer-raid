@@ -1,6 +1,6 @@
-import { audio } from "./audio";
-import { haptics } from "./haptics";
-import type { Actions } from "./input";
+import { audio } from "./audio.ts";
+import { haptics } from "./haptics.ts";
+import type { Actions } from "./input.ts";
 import {
   applyImpulse,
   beamPull,
@@ -9,7 +9,7 @@ import {
   integrate,
   isStatic,
   sweptHit,
-} from "./physics";
+} from "./physics.ts";
 import {
   COLS,
   LASER_SPEED,
@@ -20,11 +20,20 @@ import {
   WORLD_W,
   alertFromHeat,
   canHumanShout,
+  quotaPoints,
   type Actor,
   type Kind,
-} from "./types";
-import { createWorld, saveBest, type World } from "./world";
-import { awardSalvage, loadProgress, militaryWant, raidSeconds, saveProgress } from "./progress";
+} from "./types.ts";
+import { createWorld, saveBest, type World } from "./world.ts";
+import {
+  awardSalvage,
+  loadProgress,
+  militaryWant,
+  noteBestClear,
+  raidGoal,
+  saveProgress,
+  timeBonusFor,
+} from "./progress.ts";
 import {
   BOSS_COMBAT,
   BOSS_FIGHT,
@@ -39,7 +48,7 @@ import {
   militaryShotDamage,
   militaryUnitHp,
   soakHit,
-} from "./raid-content";
+} from "./raid-content.ts";
 
 function clamp(v: number, a: number, b: number) {
   return Math.max(a, Math.min(b, v));
@@ -181,7 +190,8 @@ function stAbduct(w: World, a: Actor) {
   ) {
     s.vehicles += 1;
   }
-  addScore(w, a.score, a.x, a.y);
+  const base = quotaPoints(a.kind);
+  if (base > 0) addScore(w, base, a.x, a.y);
   if (a.boss) stingBoss(w, a);
 }
 
@@ -209,7 +219,6 @@ function stDestroy(w: World, a: Actor) {
   ) {
     s.vehicles += 1;
   }
-  addScore(w, Math.round(a.score * 0.85), a.x, a.y);
   if (a.boss) stingBoss(w, a);
 }
 
@@ -537,6 +546,21 @@ export function returnToHangar(w: World) {
   w.beamOn = false;
 }
 
+function finishQuota(w: World) {
+  const st = w.state;
+  if (st.phase !== "playing") return;
+  if (!(st.goal > 0) || st.score < st.goal) return;
+  const bonus = timeBonusFor(st.level || 1, st.elapsed);
+  st.timeBonus = bonus;
+  if (bonus > 0) st.score += bonus;
+  st.phase = "upgrade";
+  st.reason = "quota";
+  saveBest(st.score);
+  const paid = awardSalvage(loadProgress(), st.score, true);
+  noteBestClear(paid, st.level || 1, st.elapsed);
+  audio.upgrade();
+}
+
 export function startRaid(w: World, kind: "start" | "next" | "retry" = "start") {
   const p = loadProgress();
   if (kind === "next") {
@@ -545,9 +569,13 @@ export function startRaid(w: World, kind: "start" | "next" | "retry" = "start") 
   }
   const next = createWorld();
   Object.assign(w, next);
+  const level = loadProgress().level;
   w.state.phase = "playing";
-  w.state.timeLeft = raidSeconds(loadProgress().level);
+  w.state.elapsed = 0;
   w.state.score = 0;
+  w.state.timeBonus = 0;
+  w.state.goal = raidGoal(level);
+  w.state.reason = "";
   audio.ui();
 }
 
@@ -559,16 +587,7 @@ export function step(w: World, input: Actions, dt: number) {
 
   w.time += dt;
   if (!cutscene) {
-    st.timeLeft -= dt;
-    if (st.timeLeft <= 0) {
-      st.timeLeft = 0;
-      st.phase = "upgrade";
-      st.reason = "time";
-      saveBest(st.score);
-      awardSalvage(loadProgress(), st.score, true);
-      haptics.gameOver();
-      return;
-    }
+    st.elapsed += dt;
   }
 
   stepBossTalk(w, dt);
@@ -923,6 +942,8 @@ export function step(w: World, input: Actions, dt: number) {
   const lookY = s.y + s.vy * 0.18;
   st.camX += (lookX - st.camX) * (1 - Math.exp(-7 * dt));
   st.camY += (lookY - st.camY) * (1 - Math.exp(-7 * dt));
+
+  if (st.phase === "playing" && st.goal > 0 && st.score >= st.goal) finishQuota(w);
 }
 
 export function worldToScreen(

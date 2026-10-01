@@ -315,7 +315,7 @@ test("boss cutscene hard-locks input, ignores pause, soft-freezes combat", () =>
   assert.match(SIM, /wantBeam = cutscene \? false : input\.beam/);
   assert.match(SIM, /wantFire = cutscene \? false : input\.fire/);
   assert.match(SIM, /audio\.stopBeam/);
-  assert.match(SIM, /if \(!cutscene\)[\s\S]*timeLeft -= dt/);
+  assert.match(SIM, /if \(!cutscene\)[\s\S]*elapsed \+= dt/);
   assert.match(SIM, /hurtPlayer[\s\S]*bossTalk < BOSS_COMBAT/);
   assert.match(SIM, /if \(cutscene\)[\s\S]*continue/);
   assert.match(SIM, /!cutscene && a\.fireCd <= 0/);

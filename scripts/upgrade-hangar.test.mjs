@@ -34,14 +34,14 @@ function sliceBetween(source, startMark, endMark) {
 test("returnToHangar leaves a cleared sector's upgrade bay on the title hangar", () => {
   const returnToHangar = new Function("w", functionBody(SIM, "returnToHangar"));
   const cleared = {
-    state: { phase: "upgrade", reason: "time", level: 4, score: 120 },
+    state: { phase: "upgrade", reason: "quota", level: 4, score: 120 },
     beamOn: true,
   };
   returnToHangar(cleared);
   // The loop publishes world.state.phase. A HUD-only write used to snap back to upgrade.
   const shown = cleared.state.phase;
   assert.equal(shown, "title");
-  assert.equal(cleared.state.reason, "time");
+  assert.equal(cleared.state.reason, "quota");
   assert.equal(cleared.state.level, 4);
   assert.equal(cleared.state.score, 120);
   assert.equal(cleared.beamOn, false);

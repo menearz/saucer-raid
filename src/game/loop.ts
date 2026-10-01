@@ -72,7 +72,7 @@ export function runGame(
       getCloak: () => world.state.cloakT,
       getLevel: () => world.state.level,
       endSector: () => {
-        world.state.timeLeft = 0.05;
+        world.state.score = Math.max(world.state.score, world.state.goal);
       },
     };
   };
@@ -106,7 +106,9 @@ export function runGame(
       score: st.score,
       combo: st.combo,
       heat: st.heat,
-      timeLeft: st.timeLeft,
+      elapsed: st.elapsed,
+      goal: st.goal,
+      timeBonus: st.timeBonus,
       hp: st.hp,
       maxHp: st.maxHp,
       abducted: st.stats.abducted,

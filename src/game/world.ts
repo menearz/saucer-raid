@@ -1,7 +1,6 @@
 import {
   HEAT_GAIN,
   POINTS,
-  RAID_TIME,
   WORLD_H,
   WORLD_W,
   type Actor,
@@ -11,9 +10,9 @@ import {
   type Particle,
   type Popup,
   type Shout,
-} from "./types";
-import { getCraft } from "./crafts";
-import { loadProgress, ranksFor } from "./progress";
+} from "./types.ts";
+import { getCraft } from "./crafts.ts";
+import { loadProgress, raidGoal, ranksFor } from "./progress.ts";
 import {
   BOSS_COMBAT,
   bossHome,
@@ -27,7 +26,7 @@ import {
   sectorSeed,
   sectorStart,
   sectorVehicles,
-} from "./raid-content";
+} from "./raid-content.ts";
 
 export type World = {
   terrain: Uint8Array;
@@ -329,7 +328,9 @@ export function createWorld(): World {
     saucer,
     state: {
       phase: "title",
-      timeLeft: RAID_TIME,
+      elapsed: 0,
+      goal: raidGoal(level),
+      timeBonus: 0,
       score: 0,
       combo: 0,
       comboTimer: 0,

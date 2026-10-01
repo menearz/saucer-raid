@@ -27,6 +27,7 @@ import { assetUrl } from "@/game/paths";
 import {
   UPGRADES,
   buyUpgrade,
+  formatClock,
   loadProgress,
   ranksFor,
   resetProgress,
@@ -1178,7 +1179,8 @@ function HudOverlay({
     score: number;
     combo: number;
     heat: number;
-    timeLeft: number;
+    elapsed: number;
+    goal: number;
     hp: number;
     maxHp: number;
     abducted: number;
@@ -1191,8 +1193,9 @@ function HudOverlay({
     shieldMax: number;
   };
 }) {
-  const m = Math.floor(hud.timeLeft / 60);
-  const s = Math.floor(hud.timeLeft % 60)
+  const shown = Math.max(0, hud.elapsed);
+  const m = Math.floor(shown / 60);
+  const s = Math.floor(shown % 60)
     .toString()
     .padStart(2, "0");
   const t = useT();
@@ -1262,6 +1265,12 @@ function HudOverlay({
             style={metaShadow}
           >
             {t("sector", { n: hud.level })}
+          </p>
+          <p
+            className="text-xs font-semibold leading-tight tabular-nums text-fg landscape:leading-none"
+            style={metaShadow}
+          >
+            {t("goalLabel", { score: hud.score, goal: hud.goal })}
           </p>
           {hud.combo > 1 && (
             <p
@@ -1359,6 +1368,8 @@ function UpgradeBay({
     score: number;
     best: number;
     reason: string;
+    elapsed: number;
+    timeBonus: number;
     level: number;
     salvage: number;
     stats: {
@@ -1379,7 +1390,7 @@ function UpgradeBay({
   const p = loadProgress();
   const craftId = loadCraftId();
   const ranks = ranksFor(p, craftId);
-  const survived = hud.reason === "time";
+  const survived = hud.reason === "quota";
   const buy = (id: UpgradeId) => {
     buyUpgrade(loadProgress(), craftId, id);
     useHud.setState({ salvage: loadProgress().salvage });
@@ -1390,12 +1401,25 @@ function UpgradeBay({
   return (
     <Overlay>
       <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">
-        {survived ? t("sectorCleared", { n: hud.level }) : t("saucerDown")}
+        {survived ? t("quotaClear") : t("saucerDown")}
       </p>
+      {survived && (
+        <p className="mt-1 text-xs font-semibold text-fg">{t("sector", { n: hud.level })}</p>
+      )}
       <h2 className="font-display text-5xl leading-none tracking-tight landscape:text-4xl">
         {survived ? t("upgradeBay") : t("refit")}
       </h2>
       <p className="mt-2 font-display text-3xl text-accent tabular-nums">{hud.score}</p>
+      {survived && (
+        <>
+          <p className="mt-2 text-sm font-semibold text-fg">
+            {t("clearTime", { t: formatClock(hud.elapsed) })}
+          </p>
+          <p className="text-sm font-semibold text-accent">
+            {t("timeBonus", { n: hud.timeBonus })}
+          </p>
+        </>
+      )}
       <p className="text-xs text-muted">
         {t("salvage")} <span className="tabular-nums text-fg">{p.salvage}</span>
         {hud.stats
