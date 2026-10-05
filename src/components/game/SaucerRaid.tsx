@@ -1205,7 +1205,8 @@ function HudOverlay({
   const showChips = showAlert || hud.weaponTier > 0 || hud.cloakT > 0;
   const weaponKey = WEAPON_KEYS[Math.min(3, hud.weaponTier)] ?? "weaponLaser";
   const weapon = t(weaponKey);
-  const metaShadow = { textShadow: "0 1px 2px #000, 0 0 6px #000" };
+  const metaShadow = { textShadow: "0 1px 2px #000, 0 0 4px #000, 0 2px 10px #000" };
+  const cluster = "w-fit rounded-lg bg-black/55 px-2 py-1 backdrop-blur-[2px]";
   const chip =
     "inline-flex w-fit rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide";
   const pip = "h-2 w-2 rounded-full shadow-[0_0_0_1px_#000]";
@@ -1254,32 +1255,34 @@ function HudOverlay({
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.5rem,env(safe-area-inset-top))]">
       <div className="flex items-start justify-between gap-3 landscape:gap-1">
         <div className="w-fit max-w-[70%]">
-          <p
-            className="font-display text-4xl leading-none tabular-nums landscape:text-2xl"
-            style={metaShadow}
-          >
-            {hud.score}
-          </p>
-          <p
-            className="text-xs font-semibold leading-tight text-fg landscape:leading-none"
-            style={metaShadow}
-          >
-            {t("sector", { n: hud.level })}
-          </p>
-          <p
-            className="text-xs font-semibold leading-tight tabular-nums text-fg landscape:leading-none"
-            style={metaShadow}
-          >
-            {t("goalLabel", { score: hud.score, goal: hud.goal })}
-          </p>
-          {hud.combo > 1 && (
+          <div className={cluster}>
             <p
-              className="text-xs font-semibold leading-tight text-accent landscape:leading-none"
+              className="font-display text-4xl leading-none tabular-nums landscape:text-2xl"
               style={metaShadow}
             >
-              {t("combo", { n: hud.combo })}
+              {hud.score}
             </p>
-          )}
+            <p
+              className="text-xs font-semibold leading-tight text-white landscape:leading-none"
+              style={metaShadow}
+            >
+              {t("sector", { n: hud.level })}
+            </p>
+            <p
+              className="text-xs font-semibold leading-tight tabular-nums text-white landscape:leading-none"
+              style={metaShadow}
+            >
+              {t("goalLabel", { score: hud.score, goal: hud.goal })}
+            </p>
+            {hud.combo > 1 && (
+              <p
+                className="text-xs font-semibold leading-tight text-accent landscape:leading-none"
+                style={metaShadow}
+              >
+                {t("combo", { n: hud.combo })}
+              </p>
+            )}
+          </div>
           <div className="mt-0 hidden items-center gap-1 landscape:flex">
             <div className="h-1.5 w-36 shrink-0 overflow-hidden rounded-full bg-black/40">
               {heatFill()}
@@ -1293,18 +1296,20 @@ function HudOverlay({
           )}
         </div>
         <div className="shrink-0 text-right landscape:pr-[6.25rem]">
-          <p
-            className="font-display text-3xl leading-none tabular-nums landscape:text-2xl"
-            style={metaShadow}
-          >
-            {m}:{s}
-          </p>
-          <p
-            className="text-xs font-semibold text-fg landscape:whitespace-nowrap"
-            style={metaShadow}
-          >
-            {t("takenWrecked", { a: hud.abducted, d: hud.destroyed })}
-          </p>
+          <div className={`${cluster} ml-auto text-right`}>
+            <p
+              className="font-display text-3xl leading-none tabular-nums landscape:text-2xl"
+              style={metaShadow}
+            >
+              {m}:{s}
+            </p>
+            <p
+              className="text-xs font-semibold text-white landscape:whitespace-nowrap"
+              style={metaShadow}
+            >
+              {t("takenWrecked", { a: hud.abducted, d: hud.destroyed })}
+            </p>
+          </div>
         </div>
       </div>
       <div className="mt-2 flex items-center gap-2 landscape:hidden">
@@ -1325,7 +1330,7 @@ function HudOverlay({
 function MiniMap({ marks }: { marks: MapMark[] }) {
   const t = useT();
   return (
-    <div className="pointer-events-none absolute bottom-[max(9.5rem,calc(env(safe-area-inset-bottom)+8.5rem))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 landscape:top-[max(4.75rem,calc(env(safe-area-inset-top)+4rem))] landscape:bottom-auto">
+    <div className="pointer-events-none absolute bottom-[max(11.75rem,calc(env(safe-area-inset-bottom)+10.75rem))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 landscape:top-[max(5.25rem,calc(env(safe-area-inset-top)+4.5rem))] landscape:bottom-auto">
       <div className="relative h-28 w-28 overflow-hidden rounded-lg border border-border bg-bg/70 landscape:h-24 landscape:w-24">
         {marks.map((m, i) => (
           <span

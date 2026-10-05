@@ -124,10 +124,19 @@ test("raid HUD drops the full-width plate and keeps overlay chrome", () => {
   assert.match(hud, /env\(safe-area-inset-top\)/);
   assert.doesNotMatch(hud, /rounded-xl/);
   assert.doesNotMatch(hud, /bg-bg\/75/);
-  assert.doesNotMatch(hud, /backdrop-blur/);
+  assert.doesNotMatch(hud, /backdrop-blur-(sm|md|lg|xl|2xl|3xl)/);
+  assert.match(hud, /backdrop-blur-\[2px\]/);
   assert.doesNotMatch(hud, /border-white\/10/);
   assert.doesNotMatch(hud, /bg-bg\/\d+/);
-  assert.match(hud, /textShadow: "0 1px 2px #000, 0 0 6px #000"/);
+  assert.match(
+    hud,
+    /const cluster = "w-fit rounded-lg bg-black\/55 px-2 py-1 backdrop-blur-\[2px\]"/,
+  );
+  assert.match(hud, /className=\{cluster\}/);
+  assert.match(hud, /className=\{`\$\{cluster\} ml-auto text-right`\}/);
+  assert.match(hud, /text-xs font-semibold leading-tight text-white/);
+  assert.match(hud, /text-xs font-semibold text-white landscape:whitespace-nowrap/);
+  assert.match(hud, /textShadow: "0 1px 2px #000, 0 0 4px #000, 0 2px 10px #000"/);
   assert.match(hud, /style=\{metaShadow\}\s*>\s*\{hud\.score\}/);
   assert.match(hud, /style=\{metaShadow\}\s*>\s*\{m\}:\{s\}/);
   assert.match(hud, /hud\.combo > 1/);
@@ -145,13 +154,23 @@ test("landscape HUD is two floating clusters, not a full-width band", () => {
   assert.match(hud, /mt-2 flex items-center gap-2 landscape:hidden/);
   assert.match(hud, /hud\.alert !== "calm"/);
   assert.match(hud, /showChips &&/);
-  assert.doesNotMatch(hud, /backdrop-blur/);
+  assert.doesNotMatch(hud, /backdrop-blur-(sm|md|lg|xl|2xl|3xl)/);
   assert.doesNotMatch(hud, /bg-bg\/\d+/);
   assert.doesNotMatch(hud, /border-white\/10/);
 
   const map = sliceBetween(HUD, "function MiniMap(", "function UpgradeBay(");
   assert.match(map, /landscape:h-24 landscape:w-24/);
-  assert.match(map, /landscape:top-\[max\(4\.75rem,calc\(env\(safe-area-inset-top\)\+4rem\)\)\]/);
+  assert.match(
+    map,
+    /bottom-\[max\(11\.75rem,calc\(env\(safe-area-inset-bottom\)\+10\.75rem\)\)\]/,
+  );
+  assert.match(
+    map,
+    /landscape:top-\[max\(5\.25rem,calc\(env\(safe-area-inset-top\)\+4\.5rem\)\)\]/,
+  );
+  assert.match(map, /t\("mapGun"\)/);
+  assert.match(map, /t\("mapCloak"\)/);
+  assert.match(map, /t\("mapArmy"\)/);
 
   const touch = sliceBetween(HUD, "function TouchLayer(", "function HoldBtn(");
   assert.match(touch, /landscape:top-\[max\(0\.45rem,env\(safe-area-inset-top\)\)\]/);
