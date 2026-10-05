@@ -372,7 +372,8 @@ test("playing HUD shows quota text and elapsed, clear toast shows time bonus", (
   assert.match(hud, /landscape:pr-\[6\.25rem\]/);
   assert.match(hud, /h-1\.5 w-36 shrink-0 overflow-hidden rounded-full bg-black\/40/);
   assert.doesNotMatch(hud, /bg-bg\/75/);
-  assert.doesNotMatch(hud, /backdrop-blur/);
+  assert.doesNotMatch(hud, /backdrop-blur-(sm|md|lg|xl|2xl|3xl)/);
+  assert.match(hud, /w-fit rounded-lg bg-black\/55 px-2 py-1 backdrop-blur-\[2px\]/);
 
   const bay = sliceBetween(HUD, "function UpgradeBay", "function TouchLayer");
   assert.match(bay, /hud\.reason === "quota"/);
