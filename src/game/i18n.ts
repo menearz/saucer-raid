@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { DamageSource } from "./damage.ts";
 
 export type Lang = "en" | "es";
 
@@ -20,7 +21,9 @@ export const EN = {
 
   pitchLead: "You are the saucer.",
   pitchFly: "Fly the farm. Beam up cows and people. Blast what shoots back.",
-  pitchControls: "Stick or WASD to fly. Hold Beam to grab. Hold Fire to shoot. Beat the clock.",
+  pitchControls:
+    "WASD or arrows to fly. Beam: Space or K. Fire: J, Ctrl, or click. Pause: Esc or P.",
+  pitchControlsTouch: "Stick to fly. Hold Beam to grab. Hold Fire to shoot.",
 
   sector: "Sector {n}",
   best: "Best",
@@ -98,6 +101,13 @@ export const EN = {
   timeBonus: "Time bonus +{n}",
   goalLabel: "{score} / {goal}",
   saucerDown: "Saucer down",
+  killedBy: "Downed by {what}",
+  killerJeep: "jeep fire",
+  killerTank: "tank fire",
+  killerHeli: "helicopter fire",
+  killerPlane: "jet fire",
+  killerRival: "a rival saucer",
+  hullLow: "HULL LOW",
   upgradeBay: "Upgrade bay",
   refit: "Refit",
   takenWrecked: "{a} taken · {d} wrecked",
@@ -152,7 +162,8 @@ export const ES: Record<MsgKey, string> = {
   pitchLead: "Tú eres el platillo.",
   pitchFly: "Vuela la granja. Absorbe vacas y gente. Dispara a lo que te dispara.",
   pitchControls:
-    "Stick o WASD para volar. Mantén Beam para agarrar. Mantén Fire para disparar. Gana al reloj.",
+    "WASD o flechas para volar. Rayo: Espacio o K. Disparo: J, Ctrl o clic. Pausa: Esc o P.",
+  pitchControlsTouch: "Palanca para volar. Mantén Beam para agarrar. Mantén Fire para disparar.",
 
   sector: "Sector {n}",
   best: "Mejor",
@@ -230,6 +241,13 @@ export const ES: Record<MsgKey, string> = {
   timeBonus: "Bonus de tiempo +{n}",
   goalLabel: "{score} / {goal}",
   saucerDown: "Platillo derribado",
+  killedBy: "Derribado por {what}",
+  killerJeep: "fuego de jeep",
+  killerTank: "fuego de tanque",
+  killerHeli: "fuego de helicóptero",
+  killerPlane: "fuego de caza",
+  killerRival: "un platillo rival",
+  hullLow: "CASCO BAJO",
   upgradeBay: "Bahía de mejoras",
   refit: "Reequipar",
   takenWrecked: "{a} absorbidos · {d} destrozados",
@@ -372,6 +390,14 @@ export const WEAPON_KEYS: MsgKey[] = [
   "weaponTwin",
   "weaponSpread",
 ];
+
+export const KILLER_KEYS: Record<DamageSource, MsgKey> = {
+  jeep: "killerJeep",
+  tank: "killerTank",
+  heli: "killerHeli",
+  plane: "killerPlane",
+  rival: "killerRival",
+};
 
 export const UPGRADE_KEYS: Record<string, { name: MsgKey; blurb: MsgKey }> = {
   engines: { name: "upEngines", blurb: "upEnginesBlurb" },

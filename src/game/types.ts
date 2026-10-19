@@ -1,3 +1,7 @@
+import type { DamageSource } from "./damage.ts";
+
+export type { DamageSource } from "./damage.ts";
+
 export type Phase = "title" | "playing" | "paused" | "upgrade";
 
 export type Alert = "calm" | "uneasy" | "alert" | "hostile" | "air-raid";
@@ -71,6 +75,8 @@ export type Actor = {
   dmg?: number;
   shouted?: number;
   loot?: "weapon" | "cloak";
+  /** Who fired this bullet. Only set on hostile shots. */
+  shotBy?: DamageSource;
   boss?: boolean;
   shield?: number;
   shieldMax?: number;
@@ -146,6 +152,10 @@ export type GameState = {
   seed: number;
   stats: Stats;
   reason: "quota" | "destroyed" | "";
+  /** Seconds of red edge flash left after hull damage. 0 when idle. */
+  hitFlash: number;
+  /** Last shooter that actually took hull HP. Empty until the first hull hit. */
+  lastDamage: DamageSource | "";
   alert: Alert;
   craftId: string;
   beamR: number;

@@ -54,11 +54,19 @@ test("spec EN+ES chrome copy and never-blank fallback", () => {
   );
   assert.equal(
     translate("en", "pitchControls"),
-    "Stick or WASD to fly. Hold Beam to grab. Hold Fire to shoot. Beat the clock.",
+    "WASD or arrows to fly. Beam: Space or K. Fire: J, Ctrl, or click. Pause: Esc or P.",
   );
   assert.equal(
     translate("es", "pitchControls"),
-    "Stick o WASD para volar. Mantén Beam para agarrar. Mantén Fire para disparar. Gana al reloj.",
+    "WASD o flechas para volar. Rayo: Espacio o K. Disparo: J, Ctrl o clic. Pausa: Esc o P.",
+  );
+  assert.equal(
+    translate("en", "pitchControlsTouch"),
+    "Stick to fly. Hold Beam to grab. Hold Fire to shoot.",
+  );
+  assert.equal(
+    translate("es", "pitchControlsTouch"),
+    "Palanca para volar. Mantén Beam para agarrar. Mantén Fire para disparar.",
   );
   assert.equal(translate("en", "launch"), "Launch");
   assert.equal(translate("es", "launch"), "Lanzar");

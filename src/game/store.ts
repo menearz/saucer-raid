@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Alert, Phase, Shout, Stats } from "./types";
+import type { Alert, DamageSource, Phase, Shout, Stats } from "./types";
 import type { CraftId } from "./crafts";
 import { loadCraftId } from "./crafts";
 import { loadProgress, type MapMark } from "./progress";
@@ -19,6 +19,8 @@ export type HudSlice = {
   best: number;
   stats: Stats | null;
   reason: "quota" | "destroyed" | "";
+  hitFlash: number;
+  lastDamage: DamageSource | "";
   alert: Alert;
   craftId: CraftId;
   shouts: Shout[];
@@ -46,6 +48,8 @@ const empty: HudSlice = {
   best: 0,
   stats: null,
   reason: "",
+  hitFlash: 0,
+  lastDamage: "",
   alert: "calm",
   craftId: "disc",
   shouts: [],

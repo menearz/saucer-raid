@@ -1,4 +1,5 @@
 import { audio } from "./audio.ts";
+import { HULL_HIT_FLASH_S, type DamageSource } from "./damage.ts";
 import { haptics } from "./haptics.ts";
 import type { Actions } from "./input.ts";
 import {
@@ -362,6 +363,7 @@ function spawnShot(
   dy: number,
   speed: number,
   dmg: number,
+  from: DamageSource,
   life = 2.1,
 ) {
   const len = Math.hypot(dx, dy) || 1;
@@ -396,6 +398,7 @@ function spawnShot(
     fireCd: 0,
     z: y,
     dmg,
+    shotBy: from,
     mass: 0.15,
     invMass: 1 / 0.15,
   });
@@ -501,7 +504,7 @@ function stepBossTalk(w: World, dt: number) {
   }
 }
 
-function hurtPlayer(w: World, dmg = 1) {
+function hurtPlayer(w: World, dmg = 1, from?: DamageSource) {
   if (w.bossTalk < BOSS_COMBAT) return;
   if (w.saucer.flash > 0) return;
   if ((w.state.shield ?? 0) > 0) {
@@ -514,6 +517,8 @@ function hurtPlayer(w: World, dmg = 1) {
   w.state.hp = Math.max(0, w.state.hp - dmg);
   w.saucer.hp = w.state.hp;
   w.saucer.flash = 0.7;
+  w.state.hitFlash = HULL_HIT_FLASH_S;
+  if (from) w.state.lastDamage = from;
   w.state.shake = Math.min(1, w.state.shake + 0.7);
   audio.hurt();
   if (w.state.hp <= 0) {
@@ -599,6 +604,7 @@ export function step(w: World, input: Actions, dt: number) {
   st.shake = Math.max(0, st.shake - dt * 1.8);
   st.cloakT = Math.max(0, (st.cloakT ?? 0) - dt);
   if (w.saucer.flash > 0) w.saucer.flash -= dt;
+  w.state.hitFlash = Math.max(0, (w.state.hitFlash ?? 0) - dt);
   if ((st.shieldMax ?? 0) > 0 && w.saucer.flash <= 0 && st.shield < st.shieldMax) {
     st.shield = Math.min(st.shieldMax, st.shield + dt * 0.18);
   }
@@ -752,7 +758,17 @@ export function step(w: World, input: Actions, dt: number) {
         a.facing = Math.atan2(jy, jx);
         if (a.fireCd <= 0 && jl < 620) {
           a.fireCd = 1.55;
-          spawnShot(w, a.x, a.y, jx, jy, 260, militaryShotDamage("rival", st.level || 1), 1.8);
+          spawnShot(
+            w,
+            a.x,
+            a.y,
+            jx,
+            jy,
+            260,
+            militaryShotDamage("rival", st.level || 1),
+            "rival",
+            1.8,
+          );
           audio.laser();
         }
       }
@@ -778,7 +794,16 @@ export function step(w: World, input: Actions, dt: number) {
         const range = a.kind === "tank" ? 580 : 520;
         if (!cutscene && a.fireCd <= 0 && jl < range) {
           a.fireCd = a.kind === "tank" ? 1.85 : 1.15;
-          spawnShot(w, a.x, a.y, jx, jy, a.kind === "tank" ? 210 : 280, militaryShotDamage(a.kind === "tank" ? "tank" : "jeep", st.level || 1));
+          spawnShot(
+            w,
+            a.x,
+            a.y,
+            jx,
+            jy,
+            a.kind === "tank" ? 210 : 280,
+            militaryShotDamage(a.kind === "tank" ? "tank" : "jeep", st.level || 1),
+            a.kind === "tank" ? "tank" : "jeep",
+          );
           if (a.kind === "tank") audio.tank();
         }
       }
@@ -793,7 +818,17 @@ export function step(w: World, input: Actions, dt: number) {
       const jl = Math.hypot(s.x - a.x, s.y - a.y);
       if (!cutscene && (st.cloakT ?? 0) <= 0 && a.fireCd <= 0 && jl < 480) {
         a.fireCd = 0.72;
-        spawnShot(w, a.x, a.y, s.x - a.x, s.y - a.y, 300, militaryShotDamage("heli", st.level || 1), 1.6);
+        spawnShot(
+          w,
+          a.x,
+          a.y,
+          s.x - a.x,
+          s.y - a.y,
+          300,
+          militaryShotDamage("heli", st.level || 1),
+          "heli",
+          1.6,
+        );
         audio.heli();
       }
     } else if (a.kind === "plane") {
@@ -804,16 +839,20 @@ export function step(w: World, input: Actions, dt: number) {
       a.wanderT -= dt;
       if (!cutscene && (st.cloakT ?? 0) <= 0 && a.fireCd <= 0) {
         a.fireCd = 0.38;
-        spawnShot(w, a.x, a.y, Math.cos(hd), Math.sin(hd), 420, militaryShotDamage("plane", st.level || 1), 1.1);
+        spawnShot(
+          w,
+          a.x,
+          a.y,
+          Math.cos(hd),
+          Math.sin(hd),
+          420,
+          militaryShotDamage("plane", st.level || 1),
+          "plane",
+          1.1,
+        );
         audio.jet();
       }
-      if (
-        a.wanderT <= 0 ||
-        a.x < -80 ||
-        a.y < -80 ||
-        a.x > WORLD_W + 80 ||
-        a.y > WORLD_H + 80
-      ) {
+      if (a.wanderT <= 0 || a.x < -80 || a.y < -80 || a.x > WORLD_W + 80 || a.y > WORLD_H + 80) {
         a.dead = true;
       }
     } else if (a.kind === "rubble") {
@@ -902,7 +941,7 @@ export function step(w: World, input: Actions, dt: number) {
       const ln = Math.hypot(b.vx, b.vy) || 1;
       s.knockX = (s.knockX ?? 0) + (b.vx / ln) * 220;
       s.knockY = (s.knockY ?? 0) + (b.vy / ln) * 220;
-      hurtPlayer(w, b.dmg ?? 1);
+      hurtPlayer(w, b.dmg ?? 1, b.shotBy);
     }
   }
 

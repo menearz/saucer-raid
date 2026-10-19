@@ -28,11 +28,7 @@ export type GameHandle = {
   world: World;
 };
 
-export function runGame(
-  canvas: HTMLCanvasElement,
-  world: World,
-  input: Input,
-): GameHandle {
+export function runGame(canvas: HTMLCanvasElement, world: World, input: Input): GameHandle {
   let raf = 0;
   let last = performance.now();
   let acc = 0;
@@ -96,7 +92,12 @@ export function runGame(
         marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: "loot" });
       } else if (a.kind === "rival") {
         marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: "jeep" });
-      } else if (a.kind === "jeep" || a.kind === "tank" || a.kind === "heli" || a.kind === "plane") {
+      } else if (
+        a.kind === "jeep" ||
+        a.kind === "tank" ||
+        a.kind === "heli" ||
+        a.kind === "plane"
+      ) {
         marks.push({ x: a.x / WORLD_W, y: a.y / WORLD_H, t: a.kind });
       }
     }
@@ -116,10 +117,10 @@ export function runGame(
       best: Math.max(loadBest(), st.score),
       stats: st.stats,
       reason: st.reason,
+      hitFlash: st.hitFlash,
+      lastDamage: st.lastDamage,
       alert: st.alert,
-      ...(st.phase === "playing"
-        ? { craftId: (st.craftId as CraftId) || "disc" }
-        : {}),
+      ...(st.phase === "playing" ? { craftId: (st.craftId as CraftId) || "disc" } : {}),
       shouts: (world.shouts ?? []).map((s) => {
         const p = worldToScreen(world, s.x, s.y, canvas.clientWidth, canvas.clientHeight, zoom);
         return { ...s, x: p.x, y: p.y };
@@ -161,6 +162,7 @@ export function runGame(
     }
 
     const cutscene = world.bossTalk < BOSS_COMBAT;
+    const wasFlashing = world.state.hitFlash > 0;
     if (world.state.phase === "playing" && input.justPause && !cutscene) {
       world.state.phase = "paused";
       audio.stopBeam();
@@ -187,6 +189,12 @@ export function runGame(
       input.reset();
     }
     lastPhase = world.state.phase;
+
+    // step() only runs while playing, so a killing blow's flash still fades on the refit screen.
+    if (world.state.phase !== "playing" && world.state.hitFlash > 0) {
+      world.state.hitFlash = Math.max(0, world.state.hitFlash - dt);
+    }
+    if (wasFlashing || world.state.hitFlash > 0) flushHud();
 
     gl.render(world, now);
 

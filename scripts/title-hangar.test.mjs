@@ -13,17 +13,26 @@ test("hangar pitch is the spec copy, above Launch, no extra splash", () => {
   assert.equal(EN.pitchFly, "Fly the farm. Beam up cows and people. Blast what shoots back.");
   assert.equal(
     EN.pitchControls,
-    "Stick or WASD to fly. Hold Beam to grab. Hold Fire to shoot. Beat the clock.",
+    "WASD or arrows to fly. Beam: Space or K. Fire: J, Ctrl, or click. Pause: Esc or P.",
   );
+  assert.equal(EN.pitchControlsTouch, "Stick to fly. Hold Beam to grab. Hold Fire to shoot.");
   assert.equal(ES.pitchLead, "Tú eres el platillo.");
   assert.equal(ES.pitchFly, "Vuela la granja. Absorbe vacas y gente. Dispara a lo que te dispara.");
   assert.equal(
     ES.pitchControls,
-    "Stick o WASD para volar. Mantén Beam para agarrar. Mantén Fire para disparar. Gana al reloj.",
+    "WASD o flechas para volar. Rayo: Espacio o K. Disparo: J, Ctrl o clic. Pausa: Esc o P.",
+  );
+  assert.equal(
+    ES.pitchControlsTouch,
+    "Palanca para volar. Mantén Beam para agarrar. Mantén Fire para disparar.",
   );
   assert.match(HUD, /t\("pitchLead"\)/);
   assert.match(HUD, /t\("pitchFly"\)/);
   assert.match(HUD, /t\("pitchControls"\)/);
+  assert.match(HUD, /t\("pitchControlsTouch"\)/);
+  const pitchFn = HUD.slice(HUD.indexOf("function HangarPitch"), HUD.indexOf("function pickCraft"));
+  assert.doesNotMatch(pitchFn, /line-clamp/);
+  assert.doesNotMatch(pitchFn, /landscape:hidden/);
   assert.doesNotMatch(HUD, /Pick a hull\. Survive the clock/);
   const pitch = HUD.indexOf("<HangarPitch");
   const launch = HUD.indexOf("<LaunchButton");
