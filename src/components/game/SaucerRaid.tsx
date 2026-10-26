@@ -9,6 +9,7 @@ import {
 } from "@/lib/multiplayer/pages-signal";
 import { wingmanWaitMessage } from "@/lib/multiplayer/wingman-status";
 import { audio } from "@/game/audio";
+import { HULL_HIT_FLASH_S, isDamageSource, isLowHull } from "@/game/damage";
 import { openFeedbackForm } from "@/game/feedback";
 import { loadArt } from "@/game/assets";
 import {
@@ -37,6 +38,7 @@ import {
 } from "@/game/progress";
 import {
   ALERT_KEYS,
+  KILLER_KEYS,
   UPGRADE_KEYS,
   WEAPON_KEYS,
   applyDocumentLang,
@@ -44,12 +46,58 @@ import {
   useT,
   type Lang,
 } from "@/game/i18n";
+import { showTouchControls, type TouchCapability } from "@/game/touch-ui";
 import { ALERTS } from "@/game/types";
 import { createWorld, loadBest } from "@/game/world";
 import { captionView, createCaptionEngine, syncCaptionEngine } from "./shout-caption";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+function useTouchControls(): boolean {
+  const [cap, setCap] = useState<TouchCapability>({
+    pointerCoarse: false,
+    maxTouchPoints: 0,
+    sawTouch: false,
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    const read = () => {
+      setCap((prev) => ({
+        pointerCoarse: mq.matches,
+        maxTouchPoints: navigator.maxTouchPoints || 0,
+        sawTouch: prev.sawTouch,
+      }));
+    };
+    read();
+    const onTouch = (e: Event) => {
+      if (e.type === "pointerdown" && (e as PointerEvent).pointerType !== "touch") return;
+      setCap((prev) => (prev.sawTouch ? prev : { ...prev, sawTouch: true }));
+    };
+    mq.addEventListener("change", read);
+    window.addEventListener("touchstart", onTouch, { passive: true });
+    window.addEventListener("pointerdown", onTouch, { passive: true });
+    return () => {
+      mq.removeEventListener("change", read);
+      window.removeEventListener("touchstart", onTouch);
+      window.removeEventListener("pointerdown", onTouch);
+    };
+  }, []);
+
+  return showTouchControls(cap);
+}
+
+function HullHitFlash({ amount }: { amount: number }) {
+  const opacity = Math.max(0, Math.min(1, amount / HULL_HIT_FLASH_S));
+  return (
+    <div
+      className="hull-hit-flash pointer-events-none absolute inset-0 z-[35]"
+      style={{ opacity }}
+      aria-hidden
+    />
+  );
+}
 
 export function SaucerRaid() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -66,6 +114,7 @@ export function SaucerRaid() {
   const setLang = useI18n((s) => s.setLang);
   const lang = useI18n((s) => s.lang);
   const t = useT();
+  const touchControls = useTouchControls();
 
   useEffect(() => {
     useI18n.getState().hydrate();
@@ -160,6 +209,7 @@ export function SaucerRaid() {
       style={{ touchAction: "none" }}
     >
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+      {hud.hitFlash > 0 && <HullHitFlash amount={hud.hitFlash} />}
 
       {hud.phase === "playing" && <HudOverlay hud={hud} />}
       {hud.phase === "playing" && <MiniMap marks={hud.marks} />}
@@ -167,6 +217,7 @@ export function SaucerRaid() {
       {hud.phase === "playing" && (
         <TouchLayer
           input={inputRef.current}
+          showTouch={touchControls}
           onPause={() => {
             haptics.tap();
             handleRef.current?.pause();
@@ -219,6 +270,7 @@ export function SaucerRaid() {
           isPending={!pages && isPending}
           hasUser={!pages && !!user}
           showAccount={!pages}
+          touchControls={touchControls}
         />
       )}
 
@@ -242,6 +294,7 @@ function TitleScreen({
   isPending,
   hasUser,
   showAccount = true,
+  touchControls,
 }: {
   ready: boolean;
   best: number;
@@ -250,6 +303,7 @@ function TitleScreen({
   isPending: boolean;
   hasUser: boolean;
   showAccount?: boolean;
+  touchControls: boolean;
 }) {
   const level = useHud((s) => s.level);
   const salvage = useHud((s) => s.salvage);
@@ -302,7 +356,7 @@ function TitleScreen({
               {t("sector", { n: level })}
             </p>
             <HangarWordmark wrap={wrap} />
-            <HangarPitch />
+            <HangarPitch touch={touchControls} />
             {best > 0 && (
               <p className="mt-2 text-xs text-muted">
                 {t("best")} <span className="tabular-nums text-fg">{best}</span>
@@ -357,19 +411,14 @@ function HangarWordmark({ wrap }: { wrap: boolean }) {
   );
 }
 
-function HangarPitch() {
+function HangarPitch({ touch }: { touch: boolean }) {
   const t = useT();
   return (
     <div className="mt-1.5 max-w-sm space-y-1 landscape:mt-1.5">
       <p className="text-sm font-medium leading-snug text-fg">{t("pitchLead")}</p>
-      <p className="line-clamp-1 text-xs leading-snug text-muted landscape:hidden">
-        {t("pitchFly")} {t("pitchControls")}
-      </p>
-      <p className="hidden text-xs leading-snug text-muted landscape:block sm:text-sm">
-        {t("pitchFly")}
-      </p>
-      <p className="hidden text-xs leading-snug text-muted landscape:block sm:text-sm">
-        {t("pitchControls")}
+      <p className="text-xs leading-snug text-muted sm:text-sm">{t("pitchFly")}</p>
+      <p className="text-xs leading-snug text-muted sm:text-sm">
+        {touch ? t("pitchControlsTouch") : t("pitchControls")}
       </p>
     </div>
   );
@@ -1209,16 +1258,30 @@ function HudOverlay({
   const cluster = "w-fit rounded-lg bg-black/55 px-2 py-1 backdrop-blur-[2px]";
   const chip =
     "inline-flex w-fit rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide";
+  const lowHull = isLowHull(hud.hp);
   const pip = "h-2 w-2 rounded-full shadow-[0_0_0_1px_#000]";
   const pips = () => (
-    <div className="flex gap-1">
-      {Array.from({ length: hud.maxHp }).map((_, i) => (
-        <span key={i} className={`${pip} ${i < hud.hp ? "bg-accent" : "bg-surface-2"}`} />
-      ))}
-      {hud.shieldMax > 0 &&
-        Array.from({ length: Math.ceil(hud.shieldMax) }).map((_, i) => (
-          <span key={`s${i}`} className={`${pip} ${i < hud.shield ? "bg-warn" : "bg-surface-2"}`} />
+    <div className="flex shrink-0 items-center gap-1.5">
+      {lowHull && (
+        <span className="text-[10px] font-semibold uppercase leading-none tracking-wide text-danger">
+          {t("hullLow")}
+        </span>
+      )}
+      <div className={`flex gap-1 ${lowHull ? "hull-pip-pulse" : ""}`}>
+        {Array.from({ length: hud.maxHp }).map((_, i) => (
+          <span key={i} className={`${pip} ${i < hud.hp ? "bg-accent" : "bg-surface-2"}`} />
         ))}
+      </div>
+      {hud.shieldMax > 0 && (
+        <div className="flex gap-1">
+          {Array.from({ length: Math.ceil(hud.shieldMax) }).map((_, i) => (
+            <span
+              key={`s${i}`}
+              className={`${pip} ${i < hud.shield ? "bg-warn" : "bg-surface-2"}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
   const heatFill = () => (
@@ -1312,8 +1375,8 @@ function HudOverlay({
           </div>
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-2 landscape:hidden">
-        <div className="h-1.5 min-w-28 flex-1 overflow-hidden rounded-full bg-black/40">
+      <div className="mt-2 flex items-center gap-2 landscape:hidden pr-[7.5rem]">
+        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-black/40">
           {heatFill()}
         </div>
         {pips()}
@@ -1330,8 +1393,8 @@ function HudOverlay({
 function MiniMap({ marks }: { marks: MapMark[] }) {
   const t = useT();
   return (
-    <div className="pointer-events-none absolute bottom-[max(11.75rem,calc(env(safe-area-inset-bottom)+10.75rem))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 landscape:top-[max(5.25rem,calc(env(safe-area-inset-top)+4.5rem))] landscape:bottom-auto">
-      <div className="relative h-28 w-28 overflow-hidden rounded-lg border border-border bg-bg/70 landscape:h-24 landscape:w-24">
+    <div className="pointer-events-none absolute bottom-[max(11.75rem,calc(env(safe-area-inset-bottom)+10.75rem))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 flex flex-row items-end gap-1 landscape:top-[max(5.25rem,calc(env(safe-area-inset-top)+4.5rem))] landscape:bottom-auto landscape:flex-col landscape:items-start">
+      <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-border bg-bg/70 landscape:h-24 landscape:w-24">
         {marks.map((m, i) => (
           <span
             key={`${m.t}-${i}`}
@@ -1354,7 +1417,7 @@ function MiniMap({ marks }: { marks: MapMark[] }) {
           />
         ))}
       </div>
-      <div className="mt-1 flex flex-wrap gap-x-2 rounded-md bg-bg/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+      <div className="flex max-w-28 flex-wrap gap-x-2 rounded-md bg-bg/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
         <span className="text-warn">{t("mapGun")}</span>
         <span className="text-fg">{t("mapCloak")}</span>
         <span className="text-danger">{t("mapArmy")}</span>
@@ -1377,6 +1440,7 @@ function UpgradeBay({
     timeBonus: number;
     level: number;
     salvage: number;
+    lastDamage: string;
     stats: {
       abducted: number;
       destroyed: number;
@@ -1414,6 +1478,11 @@ function UpgradeBay({
       <h2 className="font-display text-5xl leading-none tracking-tight landscape:text-4xl">
         {survived ? t("upgradeBay") : t("refit")}
       </h2>
+      {!survived && isDamageSource(hud.lastDamage) && (
+        <p className="mt-2 text-sm font-semibold text-danger">
+          {t("killedBy", { what: t(KILLER_KEYS[hud.lastDamage]) })}
+        </p>
+      )}
       <p className="mt-2 font-display text-3xl text-accent tabular-nums">{hud.score}</p>
       {survived && (
         <>
@@ -1480,11 +1549,13 @@ function UpgradeBay({
 
 function TouchLayer({
   input,
+  showTouch,
   onPause,
   muted,
   onMute,
 }: {
   input: Input;
+  showTouch: boolean;
   onPause: () => void;
   muted: boolean;
   onMute: () => void;
@@ -1492,6 +1563,14 @@ function TouchLayer({
   const t = useT();
   const moveRef = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (showTouch) return;
+    input.sticks = input.sticks.filter((s) => s.kind !== "move");
+    input.setBeam(false);
+    input.setFire(false);
+    setKnob({ x: 0, y: 0 });
+  }, [input, showTouch]);
 
   useEffect(() => {
     return () => {
@@ -1513,69 +1592,75 @@ function TouchLayer({
         </IconBtn>
       </div>
 
-      <div
-        ref={moveRef}
-        className="absolute bottom-0 left-0 z-20 h-[42%] w-[48%] touch-none landscape:top-0 landscape:h-full landscape:w-[min(38%,18rem)] landscape:pl-[env(safe-area-inset-left)]"
-        onPointerDown={(e) => {
-          const el = moveRef.current;
-          if (!el) return;
-          el.setPointerCapture(e.pointerId);
-          const r = el.getBoundingClientRect();
-          const x = e.clientX - r.left;
-          const y = e.clientY - r.top;
-          input.beginStick(e.pointerId, x, y, "move");
-          haptics.tap();
-          setKnob({ x: 0, y: 0 });
-        }}
-        onPointerMove={(e) => {
-          const el = moveRef.current;
-          if (!el) return;
-          const r = el.getBoundingClientRect();
-          const x = e.clientX - r.left;
-          const y = e.clientY - r.top;
-          input.moveStick(e.pointerId, x, y);
-          const s = input.sticks.find((p) => p.id === e.pointerId);
-          if (s) {
-            const dx = Math.max(-54, Math.min(54, s.x - s.ox));
-            const dy = Math.max(-54, Math.min(54, s.y - s.oy));
-            setKnob({ x: dx, y: dy });
-          }
-        }}
-        onPointerUp={(e) => {
-          input.endStick(e.pointerId);
-          setKnob({ x: 0, y: 0 });
-        }}
-        onPointerCancel={(e) => {
-          input.endStick(e.pointerId);
-          setKnob({ x: 0, y: 0 });
-        }}
-      >
-        <div className="pointer-events-none absolute bottom-16 left-10 size-28 rounded-full border border-fg/20 bg-surface/75 backdrop-blur-sm landscape:bottom-8 landscape:left-8">
+      {showTouch && (
+        <>
           <div
-            className="absolute left-1/2 top-1/2 size-11 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fg/80"
-            style={{ transform: `translate(calc(-50% + ${knob.x}px), calc(-50% + ${knob.y}px))` }}
-          />
-        </div>
-      </div>
+            ref={moveRef}
+            className="absolute bottom-0 left-0 z-20 h-[42%] w-[48%] touch-none landscape:top-0 landscape:h-full landscape:w-[min(38%,18rem)] landscape:pl-[env(safe-area-inset-left)]"
+            onPointerDown={(e) => {
+              const el = moveRef.current;
+              if (!el) return;
+              el.setPointerCapture(e.pointerId);
+              const r = el.getBoundingClientRect();
+              const x = e.clientX - r.left;
+              const y = e.clientY - r.top;
+              input.beginStick(e.pointerId, x, y, "move");
+              haptics.tap();
+              setKnob({ x: 0, y: 0 });
+            }}
+            onPointerMove={(e) => {
+              const el = moveRef.current;
+              if (!el) return;
+              const r = el.getBoundingClientRect();
+              const x = e.clientX - r.left;
+              const y = e.clientY - r.top;
+              input.moveStick(e.pointerId, x, y);
+              const s = input.sticks.find((p) => p.id === e.pointerId);
+              if (s) {
+                const dx = Math.max(-54, Math.min(54, s.x - s.ox));
+                const dy = Math.max(-54, Math.min(54, s.y - s.oy));
+                setKnob({ x: dx, y: dy });
+              }
+            }}
+            onPointerUp={(e) => {
+              input.endStick(e.pointerId);
+              setKnob({ x: 0, y: 0 });
+            }}
+            onPointerCancel={(e) => {
+              input.endStick(e.pointerId);
+              setKnob({ x: 0, y: 0 });
+            }}
+          >
+            <div className="pointer-events-none absolute bottom-16 left-10 size-28 rounded-full border border-fg/20 bg-surface/75 backdrop-blur-sm landscape:bottom-8 landscape:left-8">
+              <div
+                className="absolute left-1/2 top-1/2 size-11 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fg/80"
+                style={{
+                  transform: `translate(calc(-50% + ${knob.x}px), calc(-50% + ${knob.y}px))`,
+                }}
+              />
+            </div>
+          </div>
 
-      <div className="absolute bottom-[max(4.25rem,calc(env(safe-area-inset-bottom)+3.25rem))] right-[max(1rem,env(safe-area-inset-right))] z-20 flex items-end gap-3 landscape:bottom-[max(1rem,env(safe-area-inset-bottom))] landscape:flex-col-reverse landscape:gap-2">
-        <HoldBtn
-          label={t("beam")}
-          onHold={(v) => {
-            if (v) haptics.tap();
-            input.setBeam(v);
-          }}
-          className="h-[72px] w-[72px] landscape:h-16 landscape:w-16"
-        />
-        <HoldBtn
-          label={t("fire")}
-          onHold={(v) => {
-            if (v) haptics.tap();
-            input.setFire(v);
-          }}
-          className="h-[88px] w-[88px] landscape:h-[72px] landscape:w-[72px]"
-        />
-      </div>
+          <div className="absolute bottom-[max(4.25rem,calc(env(safe-area-inset-bottom)+3.25rem))] right-[max(1rem,env(safe-area-inset-right))] z-20 flex items-end gap-3 landscape:bottom-[max(1rem,env(safe-area-inset-bottom))] landscape:flex-col-reverse landscape:gap-2">
+            <HoldBtn
+              label={t("beam")}
+              onHold={(v) => {
+                if (v) haptics.tap();
+                input.setBeam(v);
+              }}
+              className="h-[72px] w-[72px] landscape:h-16 landscape:w-16"
+            />
+            <HoldBtn
+              label={t("fire")}
+              onHold={(v) => {
+                if (v) haptics.tap();
+                input.setFire(v);
+              }}
+              className="h-[88px] w-[88px] landscape:h-[72px] landscape:w-[72px]"
+            />
+          </div>
+        </>
+      )}
     </>
   );
 }

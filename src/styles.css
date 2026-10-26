@@ -78,3 +78,34 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Last hull pip. Steady under reduced motion — the label stays, the pulse does not. */
+@keyframes hull-pip-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+.hull-pip-pulse {
+  animation: hull-pip-pulse 0.85s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hull-pip-pulse {
+    animation: none !important;
+  }
+}
+
+/* ~200ms red edge when hull HP drops. Opacity is driven by the sim timer. */
+.hull-hit-flash {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(180, 20, 16, 0) 45%,
+    rgba(180, 20, 16, 0.5) 78%,
+    rgba(128, 8, 8, 0.88) 100%
+  );
+}

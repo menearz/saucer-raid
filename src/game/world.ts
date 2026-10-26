@@ -70,12 +70,7 @@ export function emptyStats() {
   };
 }
 
-function actor(
-  kind: Kind,
-  x: number,
-  y: number,
-  opts: Partial<Actor> & { sprite: string },
-): Actor {
+function actor(kind: Kind, x: number, y: number, opts: Partial<Actor> & { sprite: string }): Actor {
   const score = POINTS[kind] ?? 0;
   const heat = HEAT_GAIN[kind] ?? 0;
   return {
@@ -120,13 +115,7 @@ export function createWorld(): World {
   const popups: Popup[] = [];
   const shouts: Shout[] = [];
 
-  const place = (
-    kind: Kind,
-    x: number,
-    y: number,
-    sprite: string,
-    extra: Partial<Actor>,
-  ) => {
+  const place = (kind: Kind, x: number, y: number, sprite: string, extra: Partial<Actor>) => {
     actors.push(actor(kind, x, y, { sprite, ...extra }));
   };
 
@@ -157,13 +146,7 @@ export function createWorld(): World {
     livestock(s.kind, s.sprite, s.n, s.x0, s.y0, s.x1, s.y1, s.r, s.t);
   }
 
-  const folk = (
-    kind: Kind,
-    sprites: string[],
-    n: number,
-    x0: number,
-    x1: number,
-  ) => {
+  const folk = (kind: Kind, sprites: string[], n: number, x0: number, x1: number) => {
     for (let i = 0; i < n; i++) {
       const sp = sprites[Math.floor(rand() * sprites.length)]!;
       place(kind, x0 + rand() * (x1 - x0), 180 + rand() * (WORLD_H - 360), sp, {
@@ -249,14 +232,19 @@ export function createWorld(): World {
     const tree = rand() > 0.45 ? "tree" : "pine";
     props.push([tree, 80 + rand() * 3000, 80 + rand() * 3300, 44, 56]);
   }
-  for (let i = 0; i < plan.hay; i++) props.push(["hay", 160 + rand() * 2200, 200 + rand() * 3000, 34, 30]);
-  for (let i = 0; i < plan.bush; i++) props.push(["bush", 100 + rand() * 4300, 100 + rand() * 3300, 28, 24]);
-  for (let i = 0; i < plan.crate; i++) props.push(["crate", plan.townX0 + rand() * 1200, 200 + rand() * 3000, 24, 24]);
-  for (let i = 0; i < plan.barrel; i++) props.push(["barrel", plan.townX0 + rand() * 1200, 200 + rand() * 3000, 22, 28]);
+  for (let i = 0; i < plan.hay; i++)
+    props.push(["hay", 160 + rand() * 2200, 200 + rand() * 3000, 34, 30]);
+  for (let i = 0; i < plan.bush; i++)
+    props.push(["bush", 100 + rand() * 4300, 100 + rand() * 3300, 28, 24]);
+  for (let i = 0; i < plan.crate; i++)
+    props.push(["crate", plan.townX0 + rand() * 1200, 200 + rand() * 3000, 24, 24]);
+  for (let i = 0; i < plan.barrel; i++)
+    props.push(["barrel", plan.townX0 + rand() * 1200, 200 + rand() * 3000, 22, 28]);
   for (let i = 0; i < plan.mailbox; i++) {
     props.push(["mailbox", plan.townX0 + rand() * 1100, 240 + rand() * 3000, 18, 28]);
   }
-  for (let i = 0; i < plan.pole; i++) props.push(["pole", plan.townX0 + rand() * 1100, 200 + rand() * 3000, 16, 70]);
+  for (let i = 0; i < plan.pole; i++)
+    props.push(["pole", plan.townX0 + rand() * 1100, 200 + rand() * 3000, 16, 70]);
   for (const [key, x, y, w, h] of props) {
     place("prop", x, y, key, {
       propKey: key,
@@ -346,6 +334,8 @@ export function createWorld(): World {
       seed: sectorSeed(level),
       stats: emptyStats(),
       reason: "",
+      hitFlash: 0,
+      lastDamage: "",
       alert: "calm",
       craftId: craft.id,
       beamR: beam,
