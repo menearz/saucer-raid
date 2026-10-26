@@ -24,7 +24,7 @@ test("hangar pitch is the spec copy, above Launch, no extra splash", () => {
   );
   assert.equal(
     ES.pitchControlsTouch,
-    "Palanca para volar. Mantén Beam para agarrar. Mantén Fire para disparar.",
+    "Palanca para volar. Mantén Haz para agarrar. Mantén Fire para disparar.",
   );
   assert.match(HUD, /t\("pitchLead"\)/);
   assert.match(HUD, /t\("pitchFly"\)/);
@@ -71,4 +71,31 @@ test("hangar primary button is Launch, not Play or Launch sector", () => {
   const lang = title.indexOf("<HangarLang");
   const launch = title.indexOf("<LaunchButton");
   assert.ok(lang >= 0 && launch > lang, "language control sits in the hangar header, above Launch");
+});
+
+test("hangar Privacy text link; no Closed Alpha; yoke ES via i18n", () => {
+  assert.equal(EN.privacy, "Privacy");
+  assert.equal(ES.privacy, "Privacidad");
+  assert.equal(EN.statBeam, "Beam");
+  assert.equal(ES.statBeam, "Haz");
+  assert.equal(EN.beam, "Beam");
+  assert.equal(ES.beam, "Haz");
+  assert.equal(EN.craftYokeName, "Yoke Runner");
+  assert.equal(ES.craftYokeName, "Corredor Yugo");
+  assert.equal(EN.craftYokeTag, "Hauler");
+  assert.equal(ES.craftYokeTag, "Carguero");
+  assert.equal(EN.craftYokeBlurb, "Fat yoke. Wide tractor. The dish never blinks.");
+  assert.equal(ES.craftYokeBlurb, "Yugo grueso. Tractor ancho. El plato no parpadea.");
+  assert.match(HUD, /t\("privacy"\)/);
+  assert.match(HUD, /assetUrl\("privacy\/"\)/);
+  assert.doesNotMatch(HUD, /closed-alpha|Closed Alpha|Alfa cerrada|closedAlpha/);
+  const title = HUD.slice(
+    HUD.indexOf("function TitleScreen"),
+    HUD.indexOf("function HangarWordmark"),
+  );
+  assert.match(title, /<SendIdea variant="text"/);
+  assert.match(title, /t\("privacy"\)/);
+  assert.match(HUD, /craft\.id === "yoke" \? t\("craftYokeName"\)/);
+  assert.match(HUD, /craft\.id === "yoke" \? t\("craftYokeTag"\)/);
+  assert.match(HUD, /craft\.id === "yoke" \? t\("craftYokeBlurb"\)/);
 });

@@ -325,6 +325,12 @@ function TitleScreen({
         <div className="flex min-w-0 flex-col items-start gap-1">
           <HangarLang />
           <SendIdea variant="text" />
+          <a
+            href={assetUrl("privacy/")}
+            className="h-6 max-w-full truncate px-0.5 text-left text-xs text-muted"
+          >
+            {t("privacy")}
+          </a>
         </div>
         {showAccount ? (
           isPending ? (
@@ -548,15 +554,23 @@ function HangarInfo({ part = "all" }: { part?: "all" | "identity" | "stats" }) {
     >
       {showIdentity && (
         <>
-          <p className="text-[10px] uppercase tracking-widest text-accent">{craft.tag}</p>
+          <p className="text-[10px] uppercase tracking-widest text-accent">
+            {craft.id === "yoke" ? t("craftYokeTag") : craft.tag}
+          </p>
           <p className="font-display text-2xl leading-none tracking-tight landscape:text-4xl">
-            {craft.name}
+            {craft.id === "yoke" ? t("craftYokeName") : craft.name}
           </p>
         </>
       )}
-      {part === "all" && <p className="mt-1 text-xs leading-snug text-muted">{craft.blurb}</p>}
+      {part === "all" && (
+        <p className="mt-1 text-xs leading-snug text-muted">
+          {craft.id === "yoke" ? t("craftYokeBlurb") : craft.blurb}
+        </p>
+      )}
       {part === "stats" && (
-        <p className="line-clamp-2 text-xs leading-snug text-muted">{craft.blurb}</p>
+        <p className="line-clamp-2 text-xs leading-snug text-muted">
+          {craft.id === "yoke" ? t("craftYokeBlurb") : craft.blurb}
+        </p>
       )}
       {showStats && (
         <div className={part === "all" ? "mt-3 space-y-1.5" : "mt-2 space-y-1"}>
