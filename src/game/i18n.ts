@@ -91,6 +91,11 @@ export const EN = {
   unmute: "Unmute",
   sendIdea: "Send an idea",
   ideaHint: "We read these",
+  privacy: "Privacy",
+
+  craftYokeName: "Yoke Runner",
+  craftYokeTag: "Hauler",
+  craftYokeBlurb: "Fat yoke. Wide tractor. The dish never blinks.",
 
   beam: "Beam",
   fire: "Fire",
@@ -163,7 +168,7 @@ export const ES: Record<MsgKey, string> = {
   pitchFly: "Vuela la granja. Absorbe vacas y gente. Dispara a lo que te dispara.",
   pitchControls:
     "WASD o flechas para volar. Rayo: Espacio o K. Disparo: J, Ctrl o clic. Pausa: Esc o P.",
-  pitchControlsTouch: "Palanca para volar. Mantén Beam para agarrar. Mantén Fire para disparar.",
+  pitchControlsTouch: "Palanca para volar. Mantén Haz para agarrar. Mantén Fire para disparar.",
 
   sector: "Sector {n}",
   best: "Mejor",
@@ -174,7 +179,7 @@ export const ES: Record<MsgKey, string> = {
 
   statSpeed: "Veloc.",
   statHull: "Casco",
-  statBeam: "Beam",
+  statBeam: "Haz",
   statLaser: "Láser",
   statCool: "Fresco",
 
@@ -231,8 +236,13 @@ export const ES: Record<MsgKey, string> = {
   unmute: "Sonido",
   sendIdea: "Enviar una idea",
   ideaHint: "Las leemos",
+  privacy: "Privacidad",
 
-  beam: "Beam",
+  craftYokeName: "Corredor Yugo",
+  craftYokeTag: "Carguero",
+  craftYokeBlurb: "Yugo grueso. Tractor ancho. El plato no parpadea.",
+
+  beam: "Haz",
   fire: "Fire",
 
   sectorCleared: "Sector {n} despejado",

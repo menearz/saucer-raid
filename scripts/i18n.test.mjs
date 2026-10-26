@@ -66,7 +66,7 @@ test("spec EN+ES chrome copy and never-blank fallback", () => {
   );
   assert.equal(
     translate("es", "pitchControlsTouch"),
-    "Palanca para volar. Mantén Beam para agarrar. Mantén Fire para disparar.",
+    "Palanca para volar. Mantén Haz para agarrar. Mantén Fire para disparar.",
   );
   assert.equal(translate("en", "launch"), "Launch");
   assert.equal(translate("es", "launch"), "Lanzar");
@@ -136,4 +136,39 @@ test("hangar chrome uses the i18n helper; picker and later switch exist", () => 
   assert.match(HUD, /t\("resume"\)/);
   assert.match(HUD, /t\("upgradeBay"\)/);
   assert.doesNotMatch(HUD, /function Splash/);
+});
+
+test("privacy link, Haz leftovers, and yoke ES craft strings", () => {
+  assert.equal(translate("en", "privacy"), "Privacy");
+  assert.equal(translate("es", "privacy"), "Privacidad");
+  assert.equal(translate("en", "statBeam"), "Beam");
+  assert.equal(translate("es", "statBeam"), "Haz");
+  assert.equal(translate("en", "beam"), "Beam");
+  assert.equal(translate("es", "beam"), "Haz");
+  assert.equal(translate("en", "hangar"), "Hangar");
+  assert.equal(translate("es", "hangar"), "Hangar");
+  assert.equal(translate("en", "craftYokeName"), "Yoke Runner");
+  assert.equal(translate("es", "craftYokeName"), "Corredor Yugo");
+  assert.equal(translate("en", "craftYokeTag"), "Hauler");
+  assert.equal(translate("es", "craftYokeTag"), "Carguero");
+  assert.equal(
+    translate("en", "craftYokeBlurb"),
+    "Fat yoke. Wide tractor. The dish never blinks.",
+  );
+  assert.equal(
+    translate("es", "craftYokeBlurb"),
+    "Yugo grueso. Tractor ancho. El plato no parpadea.",
+  );
+  assert.match(HUD, /t\("privacy"\)/);
+  assert.match(HUD, /assetUrl\("privacy\/"\)/);
+  assert.doesNotMatch(HUD, /closedAlpha|Closed Alpha|Alfa cerrada|closed-alpha/);
+  assert.doesNotMatch(I18N, /closedAlpha|Closed Alpha|Alfa cerrada/);
+  assert.match(HUD, /t\("craftYokeName"\)/);
+  assert.match(HUD, /t\("craftYokeTag"\)/);
+  assert.match(HUD, /t\("craftYokeBlurb"\)/);
+  assert.match(
+    translate("es", "pitchControlsTouch"),
+    /Haz/,
+  );
+  assert.doesNotMatch(translate("es", "pitchControlsTouch"), /Beam/);
 });
