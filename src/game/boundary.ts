@@ -8,6 +8,18 @@ export const EDGE_BAND = 96;
 /** Spacing of the wooden fence segments along the seam. */
 export const FENCE_STEP = 56;
 
+/** Resting rust-wash opacity. Reduced motion holds this; otherwise it pulses. */
+export const EDGE_WASH_OPACITY = 0.26;
+
+/**
+ * WebGL edge wash. `prefers-reduced-motion: reduce` freezes the intensity
+ * so the seam stays visible without a sin pulse.
+ */
+export function edgeWashOpacity(now: number, reducedMotion: boolean): number {
+  if (reducedMotion) return EDGE_WASH_OPACITY;
+  return EDGE_WASH_OPACITY + Math.sin(now * 0.0025) * 0.07;
+}
+
 export type FencePost = { x: number; y: number; vertical: boolean };
 
 /** Billboard fence segments sitting on the world seam, all four sides. */

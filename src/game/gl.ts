@@ -4,7 +4,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { art } from "./assets";
-import { EDGE_BAND, fencePosts } from "./boundary";
+import { EDGE_BAND, edgeWashOpacity, fencePosts } from "./boundary";
 import { hullSpriteName } from "./hull-sprite";
 import { traumaOffset } from "./sim";
 import { COLS, ROWS, TILE, WORLD_H, WORLD_W, type Actor } from "./types";
@@ -372,6 +372,8 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
 
   const tmpC = new THREE.Color();
   let fencesMounted = false;
+  const reducedMotionQuery =
+    typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
 
   function mountFences() {
     if (fencesMounted || !art.sprite.fence) return;
@@ -401,7 +403,7 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
     render(w, now) {
       if (tiledFor !== w.terrain) rebuildTiles(w);
       mountFences();
-      boundary.tint.opacity = 0.26 + Math.sin(now * 0.0025) * 0.07;
+      boundary.tint.opacity = edgeWashOpacity(now, reducedMotionQuery?.matches === true);
       const vw = canvas.clientWidth;
       const vh = canvas.clientHeight;
       const landscape = vw > vh;
