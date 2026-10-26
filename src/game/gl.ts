@@ -4,6 +4,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { art } from "./assets";
+import { EDGE_BAND, edgeWashOpacity, fencePosts } from "./boundary";
 import { hullSpriteName } from "./hull-sprite";
 import { traumaOffset } from "./sim";
 import { COLS, ROWS, TILE, WORLD_H, WORLD_W, type Actor } from "./types";
@@ -29,6 +30,118 @@ function texFrom(img: HTMLImageElement | undefined) {
 function hexColor(hex: string) {
   const n = parseInt(hex.replace("#", ""), 16);
   return new THREE.Color(n);
+}
+
+type FieldBoundary = {
+  tint: THREE.MeshBasicMaterial;
+  fenceMats: THREE.SpriteMaterial[];
+  fenceSprites: THREE.Sprite[];
+  dispose: () => void;
+};
+
+/** Rust lip, inner wash, and a dark fog skirt so the map edge is not a missing-tile void. */
+function mountFieldBoundary(scene: THREE.Scene): FieldBoundary {
+  const disposables: Array<{ dispose: () => void }> = [];
+  const track = <T extends { dispose: () => void }>(obj: T) => {
+    disposables.push(obj);
+    return obj;
+  };
+  const lay = (geo: THREE.PlaneGeometry, mat: THREE.Material, x: number, z: number, y: number) => {
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+  };
+
+  const voidGeo = track(new THREE.PlaneGeometry(WORLD_W + 4800, WORLD_H + 4800));
+  const voidMat = track(new THREE.MeshBasicMaterial({ color: 0x05070b }));
+  lay(voidGeo, voidMat, WORLD_W / 2, WORLD_H / 2, -2);
+
+  const lipMat = track(new THREE.MeshBasicMaterial({ color: 0xd46a4c }));
+  const lip = 5;
+  lay(track(new THREE.PlaneGeometry(WORLD_W, lip)), lipMat, WORLD_W / 2, lip / 2, 1.15);
+  lay(track(new THREE.PlaneGeometry(WORLD_W, lip)), lipMat, WORLD_W / 2, WORLD_H - lip / 2, 1.15);
+  lay(track(new THREE.PlaneGeometry(lip, WORLD_H)), lipMat, lip / 2, WORLD_H / 2, 1.15);
+  lay(track(new THREE.PlaneGeometry(lip, WORLD_H)), lipMat, WORLD_W - lip / 2, WORLD_H / 2, 1.15);
+
+  const tint = new THREE.MeshBasicMaterial({
+    color: 0xd46a4c,
+    transparent: true,
+    opacity: 0.3,
+    depthWrite: false,
+  });
+  lay(track(new THREE.PlaneGeometry(WORLD_W, EDGE_BAND)), tint, WORLD_W / 2, EDGE_BAND / 2, 0.65);
+  lay(
+    track(new THREE.PlaneGeometry(WORLD_W, EDGE_BAND)),
+    tint,
+    WORLD_W / 2,
+    WORLD_H - EDGE_BAND / 2,
+    0.65,
+  );
+  lay(track(new THREE.PlaneGeometry(EDGE_BAND, WORLD_H)), tint, EDGE_BAND / 2, WORLD_H / 2, 0.65);
+  lay(
+    track(new THREE.PlaneGeometry(EDGE_BAND, WORLD_H)),
+    tint,
+    WORLD_W - EDGE_BAND / 2,
+    WORLD_H / 2,
+    0.65,
+  );
+
+  const fogMats = [
+    track(
+      new THREE.MeshBasicMaterial({
+        color: 0x6a3028,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+      }),
+    ),
+    track(
+      new THREE.MeshBasicMaterial({
+        color: 0x100d10,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+      }),
+    ),
+    track(
+      new THREE.MeshBasicMaterial({
+        color: 0x07090c,
+        transparent: true,
+        opacity: 0.94,
+        depthWrite: false,
+      }),
+    ),
+  ];
+  const depths = [32, 110, 260];
+  let outer = 0;
+  for (let i = 0; i < depths.length; i++) {
+    const far = depths[i]!;
+    const d = far - outer;
+    const mid = outer + d / 2;
+    const mat = fogMats[i]!;
+    const spanH = WORLD_H + far * 2;
+    const spanW = WORLD_W + far * 2;
+    lay(track(new THREE.PlaneGeometry(d, spanH)), mat, -mid, WORLD_H / 2, 0.25);
+    lay(track(new THREE.PlaneGeometry(d, spanH)), mat, WORLD_W + mid, WORLD_H / 2, 0.25);
+    lay(track(new THREE.PlaneGeometry(spanW, d)), mat, WORLD_W / 2, -mid, 0.25);
+    lay(track(new THREE.PlaneGeometry(spanW, d)), mat, WORLD_W / 2, WORLD_H + mid, 0.25);
+    outer = far;
+  }
+
+  const fenceMats: THREE.SpriteMaterial[] = [];
+  const fenceSprites: THREE.Sprite[] = [];
+  return {
+    tint,
+    fenceMats,
+    fenceSprites,
+    dispose() {
+      tint.dispose();
+      for (const m of fenceMats) m.dispose();
+      for (const s of fenceSprites) scene.remove(s);
+      for (const d of disposables) d.dispose();
+    },
+  };
 }
 
 export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
@@ -73,12 +186,14 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
   }
 
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(WORLD_W + 400, WORLD_H + 400),
+    new THREE.PlaneGeometry(WORLD_W, WORLD_H),
     new THREE.MeshBasicMaterial({ color: 0x1a2418 }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(WORLD_W / 2, -1, WORLD_H / 2);
   scene.add(ground);
+
+  const boundary = mountFieldBoundary(scene);
 
   const tileGroup = new THREE.Group();
   scene.add(tileGroup);
@@ -256,11 +371,39 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
   resize();
 
   const tmpC = new THREE.Color();
+  let fencesMounted = false;
+  const reducedMotionQuery =
+    typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+
+  function mountFences() {
+    if (fencesMounted || !art.sprite.fence) return;
+    fencesMounted = true;
+    const map = tex("fence");
+    const matH = new THREE.SpriteMaterial({
+      map,
+      transparent: true,
+      depthWrite: false,
+    });
+    const matV = matH.clone();
+    matV.rotation = Math.PI / 2;
+    boundary.fenceMats.push(matH, matV);
+    for (const p of fencePosts()) {
+      const s = new THREE.Sprite(p.vertical ? matV : matH);
+      s.position.set(p.x, p.vertical ? 18 : 14, p.y);
+      s.scale.set(p.vertical ? 46 : 70, p.vertical ? 70 : 46, 1);
+      s.center.set(0.5, 0.42);
+      s.renderOrder = p.y + 40;
+      scene.add(s);
+      boundary.fenceSprites.push(s);
+    }
+  }
 
   return {
     resize,
     render(w, now) {
       if (tiledFor !== w.terrain) rebuildTiles(w);
+      mountFences();
+      boundary.tint.opacity = edgeWashOpacity(now, reducedMotionQuery?.matches === true);
       const vw = canvas.clientWidth;
       const vh = canvas.clientHeight;
       const landscape = vw > vh;
@@ -425,6 +568,7 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer {
     dispose() {
       composer?.dispose();
       renderer.dispose();
+      boundary.dispose();
       plane.dispose();
       beamGeo.dispose();
       beamRingGeo.dispose();

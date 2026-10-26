@@ -171,6 +171,9 @@ export type GameState = {
   abductMul: number;
 };
 
+/** How far the saucer is held inside the map. Shared with the edge tint. */
+export const FIELD_EDGE_CLAMP = 48;
+
 export const TILE = 72;
 export const COLS = 68;
 export const ROWS = 50;
