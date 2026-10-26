@@ -13,6 +13,7 @@ import {
 import { patchHud } from "./store";
 import { loadBest, type World } from "./world";
 import { loadProgress, type MapMark } from "./progress";
+import { phaseAfterPauseKey } from "./pause";
 import { BOSS_COMBAT } from "./raid-content";
 import { WORLD_H, WORLD_W } from "./types";
 
@@ -163,12 +164,10 @@ export function runGame(canvas: HTMLCanvasElement, world: World, input: Input): 
 
     const cutscene = world.bossTalk < BOSS_COMBAT;
     const wasFlashing = world.state.hitFlash > 0;
-    if (world.state.phase === "playing" && input.justPause && !cutscene) {
-      world.state.phase = "paused";
-      audio.stopBeam();
-      flushHud();
-    } else if (world.state.phase === "paused" && input.justPause) {
-      world.state.phase = "playing";
+    const nextPhase = phaseAfterPauseKey(world.state.phase, input.justPause, cutscene);
+    if (nextPhase !== world.state.phase) {
+      if (nextPhase === "paused") audio.stopBeam();
+      world.state.phase = nextPhase;
       flushHud();
     }
 

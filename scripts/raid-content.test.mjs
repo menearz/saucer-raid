@@ -42,6 +42,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WORLD = readFileSync(join(ROOT, "src/game/world.ts"), "utf8");
 const SIM = readFileSync(join(ROOT, "src/game/sim.ts"), "utf8");
 const LOOP = readFileSync(join(ROOT, "src/game/loop.ts"), "utf8");
+const PAUSE_PHASE = readFileSync(join(ROOT, "src/game/pause.ts"), "utf8");
 
 function tileMix(t) {
   const c = [0, 0, 0, 0];
@@ -321,7 +322,8 @@ test("boss cutscene hard-locks input, ignores pause, soft-freezes combat", () =>
   assert.match(SIM, /!cutscene && a\.fireCd <= 0/);
   assert.match(LOOP, /BOSS_COMBAT/);
   assert.match(LOOP, /bossTalk < BOSS_COMBAT/);
-  assert.match(LOOP, /justPause && !cutscene/);
+  assert.match(LOOP, /phaseAfterPauseKey/);
+  assert.match(PAUSE_PHASE, /justPause && !cutscene/);
 });
 
 test("hangar keeps the six original hull names plus Lantern and Anvil", () => {

@@ -11,6 +11,36 @@ export type Actions = {
 
 const DEAD = 0.18;
 
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!target || typeof target !== "object") return false;
+  const el = target as HTMLElement;
+  if (typeof el.tagName !== "string") return false;
+  const tag = el.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  return Boolean(el.isContentEditable);
+}
+
+/** Physical Escape/P, including hosts that set key and leave code empty. */
+export function isPauseKey(e: { code?: string; key?: string }): boolean {
+  const code = e.code ?? "";
+  const key = e.key ?? "";
+  return (
+    code === "Escape" ||
+    code === "KeyP" ||
+    key === "Escape" ||
+    key === "Esc" ||
+    key === "p" ||
+    key === "P"
+  );
+}
+
+function pauseCode(e: { code?: string; key?: string }): "Escape" | "KeyP" {
+  const code = e.code ?? "";
+  const key = e.key ?? "";
+  if (code === "KeyP" || key === "p" || key === "P") return "KeyP";
+  return "Escape";
+}
+
 function radial(x: number, y: number, dz = DEAD) {
   const m = Math.hypot(x, y);
   if (m < dz) return { x: 0, y: 0 };
@@ -54,6 +84,12 @@ export class Input {
   sticks: PointerStick[] = [];
   overrideMove: { x: number; y: number } | null = null;
   qaSteer = 0;
+  /** Latched on the key event so a blur/reset before the next frame cannot drop it. */
+  private pauseEdge = false;
+  /** True when this gesture's keydown was delivered. Keyup then must not toggle again. */
+  private sawPauseDown = false;
+  /** Same event object can hit window, document, and the game root. Count it once. */
+  private pauseStamp: Event | null = null;
   private unsubs: Array<() => void> = [];
 
   reset() {
@@ -71,6 +107,9 @@ export class Input {
     this.justFire = false;
     this.justPause = false;
     this.justStart = false;
+    this.pauseEdge = false;
+    this.sawPauseDown = false;
+    this.pauseStamp = null;
     this.actions = {
       moveX: 0,
       moveY: 0,
@@ -85,6 +124,13 @@ export class Input {
 
   attach(target: HTMLElement) {
     const onKey = (e: KeyboardEvent, down: boolean) => {
+      if (isPauseKey(e)) {
+        // Room-code fields must still receive P. Everywhere else, pause keys
+        // are consumed even when a HUD button has focus.
+        if (isTypingTarget(e.target)) return;
+        this.notePauseKey(e, down);
+        return;
+      }
       const code = e.code;
       if (
         [
@@ -106,8 +152,13 @@ export class Input {
     };
     const kd = (e: KeyboardEvent) => onKey(e, true);
     const ku = (e: KeyboardEvent) => onKey(e, false);
+    // Alt-tab should drop stuck movement, but not a pause edge that just landed.
     const blur = () => {
+      const edge = this.pauseEdge;
+      const saw = this.sawPauseDown;
       this.reset();
+      this.pauseEdge = edge;
+      this.sawPauseDown = saw;
     };
     const pointerLost = (e: PointerEvent) => {
       this.endStick(e.pointerId);
@@ -119,22 +170,57 @@ export class Input {
       this.mouseY = e.clientY - r.top;
       this.hasMouseAim = e.pointerType === "mouse";
     };
-    window.addEventListener("keydown", kd);
-    window.addEventListener("keyup", ku);
+    // Capture on window, document, and the game root. A bubble-only window
+    // listener misses Escape when a focused overlay stops the event on the
+    // way up, and some hosts deliver Escape on keyup only (keydown swallowed).
+    window.addEventListener("keydown", kd, true);
+    window.addEventListener("keyup", ku, true);
+    document.addEventListener("keydown", kd, true);
+    document.addEventListener("keyup", ku, true);
+    target.addEventListener("keydown", kd, true);
+    target.addEventListener("keyup", ku, true);
     window.addEventListener("blur", blur);
     document.addEventListener("visibilitychange", blur);
     window.addEventListener("pointerup", pointerLost);
     window.addEventListener("pointercancel", pointerLost);
     target.addEventListener("pointermove", mm);
     this.unsubs.push(() => {
-      window.removeEventListener("keydown", kd);
-      window.removeEventListener("keyup", ku);
+      window.removeEventListener("keydown", kd, true);
+      window.removeEventListener("keyup", ku, true);
+      document.removeEventListener("keydown", kd, true);
+      document.removeEventListener("keyup", ku, true);
+      target.removeEventListener("keydown", kd, true);
+      target.removeEventListener("keyup", ku, true);
       window.removeEventListener("blur", blur);
       document.removeEventListener("visibilitychange", blur);
       window.removeEventListener("pointerup", pointerLost);
       window.removeEventListener("pointercancel", pointerLost);
       target.removeEventListener("pointermove", mm);
     });
+  }
+
+  private notePauseKey(e: KeyboardEvent, down: boolean) {
+    if (this.pauseStamp === e) return;
+    this.pauseStamp = e;
+    e.preventDefault();
+    e.stopPropagation();
+    const code = pauseCode(e);
+    if (down) {
+      if (!e.repeat) {
+        this.sawPauseDown = true;
+        this.pauseEdge = true;
+      }
+      this.keys.add(code);
+    } else if (!this.sawPauseDown) {
+      // keydown never reached the page; the keyup is the real press.
+      this.pauseEdge = true;
+      this.keys.delete("Escape");
+      this.keys.delete("KeyP");
+    } else {
+      this.sawPauseDown = false;
+      this.keys.delete("Escape");
+      this.keys.delete("KeyP");
+    }
   }
 
   detach() {
@@ -246,14 +332,15 @@ export class Input {
       keys.has("ControlLeft") ||
       (aimStick != null && Math.hypot(ax, ay) > 0.35);
     const beam = this.beamHeld || padBeam || keys.has("Space") || keys.has("KeyK");
-    const pause = keys.has("Escape") || keys.has("KeyP");
+    const pauseHeld = keys.has("Escape") || keys.has("KeyP");
     const start = keys.has("Enter") || keys.has("Space");
 
     this.justFire = fire && !this.prevFire;
-    this.justPause = pause && !this.prevPause;
+    this.justPause = this.pauseEdge || (pauseHeld && !this.prevPause);
+    this.pauseEdge = false;
     this.justStart = start && !this.prevStart;
     this.prevFire = fire;
-    this.prevPause = pause;
+    this.prevPause = pauseHeld;
     this.prevStart = start;
 
     this.actions = {
@@ -263,7 +350,7 @@ export class Input {
       aimY: ay,
       fire,
       beam,
-      pause,
+      pause: pauseHeld,
       start,
     };
   }

@@ -16,6 +16,7 @@ import {
   LASER_SPEED,
   pickHumanLine,
   ROWS,
+  FIELD_EDGE_CLAMP,
   TILE,
   WORLD_H,
   WORLD_W,
@@ -621,8 +622,16 @@ export function step(w: World, input: Actions, dt: number) {
   s.vy += (ty - s.vy) * (1 - Math.exp(-10 * dt));
   s.knockX = (s.knockX ?? 0) * Math.exp(-7 * dt);
   s.knockY = (s.knockY ?? 0) * Math.exp(-7 * dt);
-  s.x = clamp(s.x + (s.vx + (s.knockX ?? 0)) * dt, 48, WORLD_W - 48);
-  s.y = clamp(s.y + (s.vy + (s.knockY ?? 0)) * dt, 48, WORLD_H - 48);
+  s.x = clamp(
+    s.x + (s.vx + (s.knockX ?? 0)) * dt,
+    FIELD_EDGE_CLAMP,
+    WORLD_W - FIELD_EDGE_CLAMP,
+  );
+  s.y = clamp(
+    s.y + (s.vy + (s.knockY ?? 0)) * dt,
+    FIELD_EDGE_CLAMP,
+    WORLD_H - FIELD_EDGE_CLAMP,
+  );
 
   if (ax || ay) {
     const desired = Math.atan2(ay, ax);

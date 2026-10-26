@@ -1,4 +1,5 @@
 import { art } from "./assets";
+import { EDGE_BAND, fencePosts } from "./boundary";
 import { hullSpriteName } from "./hull-sprite";
 import { traumaOffset } from "./sim";
 import { COLS, ROWS, TILE, WORLD_H, WORLD_W, type Actor } from "./types";
@@ -39,6 +40,55 @@ function drawSprite(
     ctx.globalCompositeOperation = "source-atop";
     ctx.fillStyle = "rgba(255,255,255,0.7)";
     ctx.fillRect(-w / 2, -h / 2, w, h);
+  }
+  ctx.restore();
+}
+
+/** Fence sprites plus a rust wash and fog skirt so the playable edge is obvious. */
+function drawFieldEdge(ctx: CanvasRenderingContext2D) {
+  ctx.save();
+  ctx.fillStyle = "rgba(212, 106, 76, 0.30)";
+  ctx.fillRect(0, 0, WORLD_W, EDGE_BAND);
+  ctx.fillRect(0, WORLD_H - EDGE_BAND, WORLD_W, EDGE_BAND);
+  ctx.fillRect(0, 0, EDGE_BAND, WORLD_H);
+  ctx.fillRect(WORLD_W - EDGE_BAND, 0, EDGE_BAND, WORLD_H);
+
+  const fog = 260;
+  const skirt = (
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+  ) => {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, "rgba(180, 72, 48, 0.55)");
+    g.addColorStop(0.3, "rgba(12, 14, 18, 0.84)");
+    g.addColorStop(1, "rgba(5, 7, 11, 0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
+  };
+  skirt(-fog, -fog, fog, WORLD_H + fog * 2, 0, 0, -fog, 0);
+  skirt(WORLD_W, -fog, fog, WORLD_H + fog * 2, WORLD_W, 0, WORLD_W + fog, 0);
+  skirt(-fog, -fog, WORLD_W + fog * 2, fog, 0, 0, 0, -fog);
+  skirt(-fog, WORLD_H, WORLD_W + fog * 2, fog, 0, WORLD_H, 0, WORLD_H + fog);
+
+  ctx.strokeStyle = "rgba(212, 106, 76, 0.92)";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2, 2, WORLD_W - 4, WORLD_H - 4);
+
+  const im = art.sprite.fence;
+  if (im) {
+    for (const p of fencePosts()) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      if (p.vertical) ctx.rotate(Math.PI / 2);
+      ctx.drawImage(im, -35, -23, 70, 46);
+      ctx.restore();
+    }
   }
   ctx.restore();
 }
@@ -86,6 +136,8 @@ export function render(ctx: CanvasRenderingContext2D, w: World, now: number) {
   // dusk wash
   ctx.fillStyle = "rgba(12, 22, 36, 0.26)";
   ctx.fillRect(viewL, viewT, viewR - viewL, viewB - viewT);
+
+  drawFieldEdge(ctx);
 
   // saucer spotlight
   const s = w.saucer;
@@ -245,7 +297,4 @@ export function render(ctx: CanvasRenderingContext2D, w: World, now: number) {
   vg.addColorStop(1, "rgba(0,0,0,0.42)");
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, vw, vh);
-
-  void WORLD_W;
-  void WORLD_H;
 }

@@ -150,6 +150,13 @@ export function SaucerRaid() {
     });
 
     const onPointer = (e: PointerEvent) => {
+      const phase = world.state.phase;
+      if (phase === "playing" || phase === "paused") {
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") {
+          wrap.focus({ preventScroll: true });
+        }
+      }
       if (e.pointerType === "mouse" && e.buttons & 1 && world.state.phase === "playing") {
         input.setFire(true);
         input.keys.add("Mouse0");
@@ -171,6 +178,21 @@ export function SaucerRaid() {
       handleRef.current = null;
     };
   }, [ready]);
+
+  // Keep keyboard focus on the raid while playing or paused. The pause button
+  // unmounts when the overlay opens, which would otherwise drop focus to body
+  // and some hosts then never deliver Escape to the page.
+  useEffect(() => {
+    if (hud.phase !== "playing" && hud.phase !== "paused") return;
+    const root = wrapRef.current;
+    if (!root) return;
+    const active = document.activeElement;
+    if (active && root.contains(active)) {
+      const tag = active.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    }
+    root.focus({ preventScroll: true });
+  }, [hud.phase]);
 
   const begin = (kind: "start" | "next" | "retry" = "start") => {
     inputRef.current.reset();
@@ -205,7 +227,8 @@ export function SaucerRaid() {
     <div
       ref={wrapRef}
       lang={lang}
-      className="relative h-dvh w-full overflow-hidden bg-bg text-fg"
+      tabIndex={-1}
+      className="relative h-dvh w-full overflow-hidden bg-bg text-fg outline-none"
       style={{ touchAction: "none" }}
     >
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
