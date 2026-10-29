@@ -225,15 +225,20 @@ test("death screen names the killer from i18n, with no placeholder", () => {
 });
 
 test("controls copy names the keys the input code actually binds", () => {
-  assert.match(INPUT, /keys\.has\("KeyA"\) \|\| keys\.has\("ArrowLeft"\)/);
-  assert.match(INPUT, /keys\.has\("KeyD"\) \|\| keys\.has\("ArrowRight"\)/);
-  assert.match(INPUT, /keys\.has\("KeyW"\) \|\| keys\.has\("ArrowUp"\)/);
-  assert.match(INPUT, /keys\.has\("KeyS"\) \|\| keys\.has\("ArrowDown"\)/);
-  assert.match(INPUT, /keys\.has\("Space"\) \|\| keys\.has\("KeyK"\)/);
-  assert.match(INPUT, /keys\.has\("KeyJ"\)/);
-  assert.match(INPUT, /keys\.has\("ControlLeft"\)/);
-  assert.match(INPUT, /keys\.has\("Mouse0"\)/);
-  assert.match(INPUT, /keys\.has\("Escape"\) \|\| keys\.has\("KeyP"\)/);
+  assert.match(INPUT, /MOVE_LEFT_KEYS = \["KeyA", "ArrowLeft"\]/);
+  assert.match(INPUT, /MOVE_RIGHT_KEYS = \["KeyD", "ArrowRight"\]/);
+  assert.match(INPUT, /MOVE_UP_KEYS = \["KeyW", "ArrowUp"\]/);
+  assert.match(INPUT, /MOVE_DOWN_KEYS = \["KeyS", "ArrowDown"\]/);
+  assert.match(INPUT, /BEAM_KEYS = \["Space", "KeyK"\]/);
+  assert.match(INPUT, /FIRE_KEYS = \["KeyJ", "Mouse0", "ControlLeft"\]/);
+  assert.match(INPUT, /PAUSE_KEY_CODES = \["Escape", "KeyP"\]/);
+  assert.match(INPUT, /anyHeld\(keys, MOVE_LEFT_KEYS\)/);
+  assert.match(INPUT, /anyHeld\(keys, MOVE_RIGHT_KEYS\)/);
+  assert.match(INPUT, /anyHeld\(keys, MOVE_UP_KEYS\)/);
+  assert.match(INPUT, /anyHeld\(keys, MOVE_DOWN_KEYS\)/);
+  assert.match(INPUT, /anyHeld\(keys, BEAM_KEYS\)/);
+  assert.match(INPUT, /anyHeld\(keys, FIRE_KEYS\)/);
+  assert.match(INPUT, /anyHeld\(keys, PAUSE_KEY_CODES\)/);
   assert.doesNotMatch(INPUT, /cloak/);
   assert.doesNotMatch(INPUT, /mute/i);
   assert.match(EN.pitchControls, /WASD or arrows/);

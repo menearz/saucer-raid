@@ -20,6 +20,9 @@ test("Pages config wires vite-plugin-pwa on the github.io base", () => {
   assert.match(pages, /pwa:\s*true/);
   assert.match(pages, /start_url:\s*PAGES_BASE/);
   assert.match(pages, /scope:\s*PAGES_BASE/);
+  assert.match(pages, /PWA_CACHE_ID = "saucer-raid-v2-howto"/);
+  assert.match(pages, /cacheId:\s*PWA_CACHE_ID/);
+  assert.match(pages, /cleanupOutdatedCaches:\s*true/);
 });
 
 test("PWA icons are cropped from Spectre's store square", () => {
@@ -49,12 +52,15 @@ test("built docs/ ships an installable Pages PWA", () => {
   assert.ok(sizes.has("192x192"), "missing 192 icon");
   assert.ok(sizes.has("512x512"), "missing 512 icon");
 
-  const swName = ["docs/sw.js", "docs/service-worker.js"].find((rel) => existsSync(join(ROOT, rel)));
+  const swName = ["docs/sw.js", "docs/service-worker.js"].find((rel) =>
+    existsSync(join(ROOT, rel)),
+  );
   assert.ok(swName, "service worker missing from docs/");
   const sw = read(swName);
   // Workbox generateSW registers fetch via precacheAndRoute / registerRoute.
   assert.match(sw, /precacheAndRoute|registerRoute|addEventListener\(\s*["']fetch["']/);
   assert.match(sw, /\/saucer-raid\/index\.html/);
+  assert.match(sw, /saucer-raid-v2-howto/);
   assert.ok(existsSync(join(ROOT, "docs/pwa-192.png")));
   assert.ok(existsSync(join(ROOT, "docs/pwa-512.png")));
   assert.ok(existsSync(join(ROOT, "docs/registerSW.js")));
