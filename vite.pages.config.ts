@@ -7,15 +7,18 @@ import path from "node:path";
 const PAGES_BASE = "/saucer-raid/";
 
 /**
+ * Workbox precache id for the GitHub Pages service worker.
+ * The previous ship used Workbox's default cache (`workbox-precache-v2`, no cacheId).
+ * Bump this string to drop that cache so returning players pick up the new build.
+ */
+export const PWA_CACHE_ID = "saucer-raid-v2-howto";
+
+/**
  * Shared no-account SPA used by GitHub Pages and the Capacitor wrap.
  * PWA installability is Pages-only — wrap must pass `pwa: false` so a
  * service worker is not injected into the native WebView bundle.
  */
-export function createSpaConfig(opts: {
-  base: string;
-  outDir: string;
-  pwa?: boolean;
-}) {
+export function createSpaConfig(opts: { base: string; outDir: string; pwa?: boolean }) {
   return defineConfig({
     // spa/ is the HTML/entry root. Tailwind v4 does not follow the module graph;
     // src/styles.css must @source "." so utilities in src/components/game emit.
@@ -29,7 +32,13 @@ export function createSpaConfig(opts: {
         ? VitePWA({
             registerType: "autoUpdate",
             injectRegister: "script-defer",
-            includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon.png", "pwa-192.png", "pwa-512.png"],
+            includeAssets: [
+              "favicon.ico",
+              "favicon.svg",
+              "apple-touch-icon.png",
+              "pwa-192.png",
+              "pwa-512.png",
+            ],
             manifest: {
               name: "Saucer Raid",
               short_name: "Saucer Raid",
@@ -63,6 +72,8 @@ export function createSpaConfig(opts: {
               ],
             },
             workbox: {
+              cacheId: PWA_CACHE_ID,
+              cleanupOutdatedCaches: true,
               globPatterns: ["**/*.{js,css,html,svg,png,ico,webmanifest}"],
               navigateFallback: `${PAGES_BASE}index.html`,
             },

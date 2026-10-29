@@ -11,6 +11,70 @@ export type Actions = {
 
 const DEAD = 0.18;
 
+/** Keyboard codes `update()` actually reads. Labels are the words in How to play. */
+export const MOVE_LEFT_KEYS = ["KeyA", "ArrowLeft"] as const;
+export const MOVE_RIGHT_KEYS = ["KeyD", "ArrowRight"] as const;
+export const MOVE_UP_KEYS = ["KeyW", "ArrowUp"] as const;
+export const MOVE_DOWN_KEYS = ["KeyS", "ArrowDown"] as const;
+export const BEAM_KEYS = ["Space", "KeyK"] as const;
+export const FIRE_KEYS = ["KeyJ", "Mouse0", "ControlLeft"] as const;
+export const PAUSE_KEY_CODES = ["Escape", "KeyP"] as const;
+
+export const KEY_GUIDE: Record<string, { en: string; es: string }> = {
+  KeyW: { en: "W", es: "W" },
+  KeyA: { en: "A", es: "A" },
+  KeyS: { en: "S", es: "S" },
+  KeyD: { en: "D", es: "D" },
+  ArrowUp: { en: "up arrow", es: "flecha arriba" },
+  ArrowDown: { en: "down arrow", es: "flecha abajo" },
+  ArrowLeft: { en: "left arrow", es: "flecha izquierda" },
+  ArrowRight: { en: "right arrow", es: "flecha derecha" },
+  Space: { en: "Space", es: "Espacio" },
+  KeyK: { en: "K", es: "K" },
+  KeyJ: { en: "J", es: "J" },
+  ControlLeft: { en: "left Ctrl", es: "Ctrl izquierdo" },
+  Mouse0: { en: "click", es: "clic" },
+  Escape: { en: "Esc", es: "Esc" },
+  KeyP: { en: "P", es: "P" },
+};
+
+/** Standard-mapping gamepad. `update()` reads these indexes. */
+export const PAD_MOVE_AXES = [0, 1] as const;
+export const PAD_AIM_AXES = [2, 3] as const;
+export const PAD_LABELS = {
+  move: { en: "left stick", es: "palanca izquierda" },
+  aim: { en: "right stick", es: "palanca derecha" },
+  fire: [
+    { button: 0, en: "bottom face button", es: "botón de abajo" },
+    { button: 7, en: "right trigger", es: "gatillo derecho" },
+  ],
+  beam: [
+    { button: 1, en: "right face button", es: "botón de la derecha" },
+    { button: 6, en: "left trigger", es: "gatillo izquierdo" },
+  ],
+  pause: { button: 9, en: "Start", es: "Start" },
+} as const;
+export const PAD_FIRE_BUTTONS = PAD_LABELS.fire.map((b) => b.button);
+export const PAD_BEAM_BUTTONS = PAD_LABELS.beam.map((b) => b.button);
+export const PAD_PAUSE_BUTTON = PAD_LABELS.pause.button;
+
+export function keyboardGuideCodes(): readonly string[] {
+  return [
+    ...MOVE_LEFT_KEYS,
+    ...MOVE_RIGHT_KEYS,
+    ...MOVE_UP_KEYS,
+    ...MOVE_DOWN_KEYS,
+    ...BEAM_KEYS,
+    ...FIRE_KEYS,
+    ...PAUSE_KEY_CODES,
+  ];
+}
+
+function anyHeld(keys: Set<string>, codes: readonly string[]) {
+  for (const code of codes) if (keys.has(code)) return true;
+  return false;
+}
+
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!target || typeof target !== "object") return false;
   const el = target as HTMLElement;
@@ -44,7 +108,7 @@ function pauseCode(e: { code?: string; key?: string }): "Escape" | "KeyP" {
 function radial(x: number, y: number, dz = DEAD) {
   const m = Math.hypot(x, y);
   if (m < dz) return { x: 0, y: 0 };
-  const s = ((m - dz) / (1 - dz)) / m;
+  const s = (m - dz) / (1 - dz) / m;
   return { x: x * s, y: y * s };
 }
 
@@ -134,15 +198,11 @@ export class Input {
       const code = e.code;
       if (
         [
+          ...MOVE_LEFT_KEYS,
+          ...MOVE_RIGHT_KEYS,
+          ...MOVE_UP_KEYS,
+          ...MOVE_DOWN_KEYS,
           "Space",
-          "ArrowUp",
-          "ArrowDown",
-          "ArrowLeft",
-          "ArrowRight",
-          "KeyW",
-          "KeyA",
-          "KeyS",
-          "KeyD",
         ].includes(code)
       ) {
         e.preventDefault();
@@ -265,10 +325,10 @@ export class Input {
     const keys = new Set([...this.keys, ...this.injected]);
     let mx = 0;
     let my = 0;
-    if (keys.has("KeyA") || keys.has("ArrowLeft")) mx -= 1;
-    if (keys.has("KeyD") || keys.has("ArrowRight")) mx += 1;
-    if (keys.has("KeyW") || keys.has("ArrowUp")) my -= 1;
-    if (keys.has("KeyS") || keys.has("ArrowDown")) my += 1;
+    if (anyHeld(keys, MOVE_LEFT_KEYS)) mx -= 1;
+    if (anyHeld(keys, MOVE_RIGHT_KEYS)) mx += 1;
+    if (anyHeld(keys, MOVE_UP_KEYS)) my -= 1;
+    if (anyHeld(keys, MOVE_DOWN_KEYS)) my += 1;
 
     const moveStick = this.sticks.find((s) => s.kind === "move");
     if (moveStick) {
@@ -308,31 +368,29 @@ export class Input {
     if (pads) {
       for (const p of pads) {
         if (!p) continue;
-        const ls = radial(p.axes[0] ?? 0, p.axes[1] ?? 0);
+        const ls = radial(p.axes[PAD_MOVE_AXES[0]] ?? 0, p.axes[PAD_MOVE_AXES[1]] ?? 0);
         if (ls.x || ls.y) {
           mx = ls.x;
           my = ls.y;
         }
-        const rs = radial(p.axes[2] ?? 0, p.axes[3] ?? 0);
+        const rs = radial(p.axes[PAD_AIM_AXES[0]] ?? 0, p.axes[PAD_AIM_AXES[1]] ?? 0);
         if (rs.x || rs.y) {
           ax = rs.x;
           ay = rs.y;
         }
-        if (p.buttons[0]?.pressed || p.buttons[7]?.pressed) padFire = true;
-        if (p.buttons[1]?.pressed || p.buttons[6]?.pressed) padBeam = true;
-        if (p.buttons[9]?.pressed) keys.add("Escape");
+        if (PAD_FIRE_BUTTONS.some((i) => p.buttons[i]?.pressed)) padFire = true;
+        if (PAD_BEAM_BUTTONS.some((i) => p.buttons[i]?.pressed)) padBeam = true;
+        if (p.buttons[PAD_PAUSE_BUTTON]?.pressed) keys.add("Escape");
       }
     }
 
     const fire =
       this.fireHeld ||
       padFire ||
-      keys.has("KeyJ") ||
-      keys.has("Mouse0") ||
-      keys.has("ControlLeft") ||
+      anyHeld(keys, FIRE_KEYS) ||
       (aimStick != null && Math.hypot(ax, ay) > 0.35);
-    const beam = this.beamHeld || padBeam || keys.has("Space") || keys.has("KeyK");
-    const pauseHeld = keys.has("Escape") || keys.has("KeyP");
+    const beam = this.beamHeld || padBeam || anyHeld(keys, BEAM_KEYS);
+    const pauseHeld = anyHeld(keys, PAUSE_KEY_CODES);
     const start = keys.has("Enter") || keys.has("Space");
 
     this.justFire = fire && !this.prevFire;

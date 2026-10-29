@@ -21,6 +21,7 @@ import {
   type CraftId,
 } from "@/game/crafts";
 import { haptics } from "@/game/haptics";
+import { HowToPlaySession, HOW_TO_PLAY_SECTIONS, trapTab } from "@/game/how-to-play";
 import { Input } from "@/game/input";
 import type { GameHandle } from "@/game/loop";
 import { useHud } from "@/game/store";
@@ -115,6 +116,8 @@ export function SaucerRaid() {
   const lang = useI18n((s) => s.lang);
   const t = useT();
   const touchControls = useTouchControls();
+  const guideSession = useRef(new HowToPlaySession());
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     useI18n.getState().hydrate();
@@ -193,6 +196,22 @@ export function SaucerRaid() {
     }
     root.focus({ preventScroll: true });
   }, [hud.phase]);
+
+  useEffect(() => {
+    if (hud.phase === "title" || !guideSession.current.open) return;
+    guideSession.current.hide();
+    setGuideOpen(false);
+  }, [hud.phase]);
+
+  const openGuide = (el: HTMLButtonElement) => {
+    guideSession.current.show(el);
+    setGuideOpen(true);
+  };
+
+  const closeGuide = () => {
+    guideSession.current.hide();
+    setGuideOpen(false);
+  };
 
   const begin = (kind: "start" | "next" | "retry" = "start") => {
     inputRef.current.reset();
@@ -294,7 +313,12 @@ export function SaucerRaid() {
           hasUser={!pages && !!user}
           showAccount={!pages}
           touchControls={touchControls}
+          onHowToPlay={openGuide}
         />
+      )}
+
+      {guideOpen && hud.phase === "title" && (
+        <HowToPlayPanel session={guideSession.current} onClose={closeGuide} />
       )}
 
       {hud.phase === "title" && readyLang && !picked && (
@@ -318,6 +342,7 @@ function TitleScreen({
   hasUser,
   showAccount = true,
   touchControls,
+  onHowToPlay,
 }: {
   ready: boolean;
   best: number;
@@ -327,6 +352,7 @@ function TitleScreen({
   hasUser: boolean;
   showAccount?: boolean;
   touchControls: boolean;
+  onHowToPlay: (el: HTMLButtonElement) => void;
 }) {
   const level = useHud((s) => s.level);
   const salvage = useHud((s) => s.salvage);
@@ -400,6 +426,7 @@ function TitleScreen({
           </div>
           <div className="hidden landscape:block">
             <HangarInfo />
+            <HowToPlayButton onOpen={onHowToPlay} />
             <LaunchButton ready={ready} onStart={onStart} />
             {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
           </div>
@@ -411,6 +438,7 @@ function TitleScreen({
       </div>
       <div className="sticky bottom-0 z-30 shrink-0 landscape:hidden">
         <div className="bg-bg/90 px-5 pt-2 backdrop-blur-sm pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]">
+          <HowToPlayButton onOpen={onHowToPlay} className="mt-0" />
           <LaunchButton ready={ready} onStart={onStart} flush />
           {level > 1 && <NewCampaignButton onNewCampaign={onNewCampaign} />}
         </div>
@@ -420,6 +448,116 @@ function TitleScreen({
           <HangarInfo part="stats" />
         </div>
         <NetBay />
+      </div>
+    </div>
+  );
+}
+
+function HowToPlayButton({
+  onOpen,
+  className,
+}: {
+  onOpen: (el: HTMLButtonElement) => void;
+  className?: string;
+}) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen(e.currentTarget);
+      }}
+      className={`h-11 w-full max-w-xs rounded-[20px] border border-fg/30 bg-surface text-sm font-medium text-fg ${className ?? "mt-3"}`}
+    >
+      {t("howToPlay")}
+    </button>
+  );
+}
+
+function HowToPlayPanel({ session, onClose }: { session: HowToPlaySession; onClose: () => void }) {
+  const t = useT();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        const root = panelRef.current;
+        if (!root) return;
+        const items = [
+          ...root.querySelectorAll<HTMLElement>(
+            "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+          ),
+        ].filter((el) => !el.hasAttribute("disabled"));
+        const activeIndex = items.indexOf(document.activeElement as HTMLElement);
+        const next = trapTab({ count: items.length, activeIndex, shiftKey: e.shiftKey });
+        if (next == null) return;
+        e.preventDefault();
+        e.stopPropagation();
+        items[next]?.focus();
+        return;
+      }
+      if (session.onKey(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        onCloseRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [session]);
+
+  const close = () => {
+    session.hide();
+    onClose();
+  };
+
+  return (
+    <div
+      className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-bg/80 p-3"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="how-to-play-title"
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[min(22.5rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-border bg-surface text-fg shadow-lg"
+      >
+        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
+          <h2 id="how-to-play-title" className="font-display text-3xl leading-none tracking-tight">
+            {t("howToPlay")}
+          </h2>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              close();
+            }}
+            className="h-11 shrink-0 rounded-full bg-fg px-4 text-sm font-medium text-bg"
+          >
+            {t("howToClose")}
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain break-words px-4 py-4">
+          {HOW_TO_PLAY_SECTIONS.map((section) => (
+            <section key={section.title} className="mb-4 last:mb-0">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">
+                {t(section.title)}
+              </h3>
+              <p className="mt-1 whitespace-pre-line text-[15px] leading-6 text-fg">
+                {t(section.body)}
+              </p>
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   );
